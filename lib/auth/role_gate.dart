@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../data/db.dart';
+import '../theme/tokens.dart';
 import '../trips/trips_screen.dart';
+import '../widgets/ct_widgets.dart';
 
 /// After login, loads the user's role from `profiles` and routes:
-///  - driver          → the trips screen
-///  - admin / agent    → a friendly "use the web dashboard" screen
+///  - driver        → the trips screen
+///  - admin / agent  → "use the web dashboard"
 ///
-/// This mirrors the website, which routes admin→/admin, agent→/agent,
+/// Mirrors the website, which routes admin→/admin, agent→/agent,
 /// driver→/driver from the same login. Row-Level Security lets a user read
 /// their own profile row, so no service key is involved.
 class RoleGate extends StatefulWidget {
@@ -24,12 +26,14 @@ class _RoleGateState extends State<RoleGate> {
   @override
   void initState() {
     super.initState();
-    _profile = supabase
-        .from('profiles')
-        .select('role, full_name')
-        .eq('id', widget.userId)
-        .single();
+    _profile = _load();
   }
+
+  Future<Map<String, dynamic>> _load() => supabase
+      .from('profiles')
+      .select('role, full_name')
+      .eq('id', widget.userId)
+      .single();
 
   @override
   Widget build(BuildContext context) {
@@ -38,55 +42,75 @@ class _RoleGateState extends State<RoleGate> {
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         if (snap.hasError) {
-          return const _Message(
-            title: 'Something went wrong',
-            body: 'Could not load your profile. Please sign out and try again.',
+          return _Gate(
+            icon: Icons.cloud_off_rounded,
+            title: 'Could not load your profile',
+            body: 'Check your connection and try again.',
+            tint: context.ct.red,
+            retry: () => setState(() => _profile = _load()),
           );
         }
         final role = snap.data?['role'] as String?;
         final name = snap.data?['full_name'] as String?;
-        if (role == 'driver') {
-          return TripsScreen(driverName: name);
-        }
-        return _Message(
+        if (role == 'driver') return TripsScreen(driverName: name);
+        return _Gate(
+          icon: Icons.desktop_windows_outlined,
           title: 'This app is for drivers',
           body: 'Your account is a ${role ?? 'staff'} account. '
-              'Managers, please use the CargoTrace web dashboard.',
+              'Managers and dispatchers use the CargoTrace web dashboard.',
         );
       },
     );
   }
 }
 
-/// Full-screen message with a sign-out action (used for the role gate and
-/// profile-load errors).
-class _Message extends StatelessWidget {
+class _Gate extends StatelessWidget {
+  final IconData icon;
   final String title;
   final String body;
-  const _Message({required this.title, required this.body});
+  final Color? tint;
+  final VoidCallback? retry;
+  const _Gate({
+    required this.icon,
+    required this.title,
+    required this.body,
+    this.tint,
+    this.retry,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
+        child: CtMessage(
+          icon: icon,
+          title: title,
+          body: body,
+          tint: tint,
+          action: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 260),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(title,
-                    style: Theme.of(context).textTheme.titleLarge,
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                Text(body, textAlign: TextAlign.center),
-                const SizedBox(height: 20),
-                OutlinedButton(
+                if (retry != null) ...[
+                  CtPrimaryButton(
+                    label: 'Try again',
+                    icon: Icons.refresh_rounded,
+                    onPressed: retry,
+                  ),
+                  const SizedBox(height: CtSpace.sm),
+                ],
+                TextButton.icon(
                   onPressed: () => supabase.auth.signOut(),
-                  child: const Text('Sign out'),
+                  icon: const Icon(Icons.logout_rounded, size: 18),
+                  label: const Text('Sign out'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.ct.muted2,
+                    minimumSize: const Size(0, 48),
+                  ),
                 ),
               ],
             ),

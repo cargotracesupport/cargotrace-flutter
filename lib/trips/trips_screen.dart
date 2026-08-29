@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../data/db.dart';
 import '../data/delivery.dart';
+import '../theme/tokens.dart';
+import '../widgets/ct_widgets.dart';
 
 /// Driver home — the live list of deliveries assigned to this driver.
 ///
 /// Data comes straight from Supabase via a realtime `.stream()`: new
 /// assignments appear, cancellations disappear, and status changes update the
-/// badge, all without a manual refresh. Row-Level Security guarantees the query
+/// pill, all without a manual refresh. Row-Level Security guarantees the query
 /// only ever returns THIS driver's deliveries.
 class TripsScreen extends StatefulWidget {
   final String? driverName;
@@ -31,150 +33,230 @@ class _TripsScreenState extends State<TripsScreen> {
         .order('assigned_at');
   }
 
+  /// Active trips first, finished ones last; newest first within each group.
+  List<Delivery> _sorted(List<Map<String, dynamic>> rows) {
+    final trips = rows
+        .map(Delivery.fromMap)
+        .where((d) => d.status != 'cancelled')
+        .toList();
+    trips.sort((a, b) {
+      if (a.isDone != b.isDone) return a.isDone ? 1 : -1;
+      return 0;
+    });
+    return trips;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final c = context.ct;
+    final name = widget.driverName?.split(' ').first;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Trips'),
+        titleSpacing: CtSpace.md,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              name == null ? 'My trips' : 'Hi, $name',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: c.text,
+              ),
+            ),
+            Text(
+              'Your assigned deliveries',
+              style: TextStyle(fontSize: 12, color: c.muted2),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout_rounded),
             tooltip: 'Sign out',
             onPressed: () => supabase.auth.signOut(),
           ),
+          const SizedBox(width: CtSpace.xs),
         ],
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _stream,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return _Centered(
-              icon: Icons.error_outline,
-              text: 'Could not load your trips.\n${snap.error}',
+      body: SafeArea(
+        top: false,
+        child: StreamBuilder<List<Map<String, dynamic>>>(
+          stream: _stream,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return CtMessage(
+                icon: Icons.cloud_off_rounded,
+                title: 'Could not load your trips',
+                body: 'Check your connection. This screen retries on its own.',
+                tint: c.red,
+              );
+            }
+            if (!snap.hasData) {
+              return ListView.separated(
+                padding: const EdgeInsets.all(CtSpace.md),
+                itemCount: 3,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: CtSpace.md),
+                itemBuilder: (_, __) => const CtTripSkeleton(),
+              );
+            }
+            final trips = _sorted(snap.data!);
+            if (trips.isEmpty) {
+              return const CtMessage(
+                icon: Icons.local_shipping_outlined,
+                title: 'No trips yet',
+                body: 'When a dispatcher assigns you a delivery, '
+                    'it appears here right away.',
+              );
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(
+                  CtSpace.md, CtSpace.md, CtSpace.md, CtSpace.xl),
+              itemCount: trips.length,
+              separatorBuilder: (_, __) => const SizedBox(height: CtSpace.md),
+              itemBuilder: (_, i) => _TripCard(trips[i]),
             );
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final trips = snap.data!
-              .map(Delivery.fromMap)
-              .where((d) => d.status != 'cancelled')
-              .toList();
-          if (trips.isEmpty) {
-            return const _Centered(
-              icon: Icons.local_shipping_outlined,
-              text: 'No trips assigned yet.\nNew deliveries will appear here.',
-            );
-          }
-          return ListView.separated(
-            itemCount: trips.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (_, i) => _TripTile(trips[i]),
-          );
-        },
+          },
+        ),
       ),
     );
   }
 }
 
-class _TripTile extends StatelessWidget {
+class _TripCard extends StatelessWidget {
   final Delivery trip;
-  const _TripTile(this.trip);
+  const _TripCard(this.trip);
 
   @override
   Widget build(BuildContext context) {
-    final subtitleStyle = Theme.of(context).textTheme.bodySmall;
+    final c = context.ct;
     return Opacity(
-      opacity: trip.isDone ? 0.55 : 1,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                trip.reference ?? 'No reference',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            _StatusBadge(trip),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            if (trip.goods != null) Text(trip.goods!, style: subtitleStyle),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.circle, size: 9, color: Color(0xFF2F9BD1)),
-                const SizedBox(width: 6),
-                Expanded(child: Text(trip.originLabel ?? '—', style: subtitleStyle)),
-              ],
-            ),
-            Row(
-              children: [
-                const Icon(Icons.place, size: 11, color: Colors.redAccent),
-                const SizedBox(width: 4),
-                Expanded(child: Text(trip.destLabel ?? '—', style: subtitleStyle)),
-              ],
-            ),
-          ],
-        ),
+      opacity: trip.isDone ? 0.62 : 1,
+      child: CtCard(
         // Tapping opens trip detail — next milestone.
         onTap: () {},
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final Delivery trip;
-  const _StatusBadge(this.trip);
-
-  Color get _color => switch (trip.status) {
-        'en_route' => const Color(0xFF2F9BD1),
-        'assigned' => Colors.orange,
-        'awaiting_dropoff' => Colors.deepPurple,
-        'delivered' => Colors.green,
-        _ => Colors.grey,
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: _color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        trip.statusLabel,
-        style: TextStyle(color: _color, fontSize: 11, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-}
-
-class _Centered extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _Centered({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 48, color: Colors.grey),
-            const SizedBox(height: 12),
-            Text(text, textAlign: TextAlign.center),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    trip.reference ?? 'No reference',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: c.text,
+                      letterSpacing: -0.2,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: CtSpace.sm),
+                CtStatusPill(trip.status),
+              ],
+            ),
+            if (trip.goods != null) ...[
+              const SizedBox(height: CtSpace.xs),
+              Text(
+                trip.goods!,
+                style: TextStyle(color: c.muted2, fontSize: 13),
+              ),
+            ],
+            const SizedBox(height: CtSpace.md),
+            _Leg(
+              color: c.primary,
+              filled: true,
+              label: 'Pick up',
+              value: trip.originLabel,
+            ),
+            _Connector(color: c.border2),
+            _Leg(
+              color: c.accent,
+              filled: false,
+              label: 'Drop off',
+              value: trip.destLabel,
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// One end of the journey: a marker, a small caption and the address.
+class _Leg extends StatelessWidget {
+  final Color color;
+  final bool filled;
+  final String label;
+  final String? value;
+  const _Leg({
+    required this.color,
+    required this.filled,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ct;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 3),
+          child: Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: filled ? color : Colors.transparent,
+              shape: BoxShape.circle,
+              border: Border.all(color: color, width: 2.5),
+            ),
+          ),
+        ),
+        const SizedBox(width: CtSpace.sm + 2),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: c.muted,
+                ),
+              ),
+              Text(
+                value ?? 'Not set',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: value == null ? c.muted : c.text,
+                  fontStyle: value == null ? FontStyle.italic : null,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The short vertical rule joining pickup to drop-off.
+class _Connector extends StatelessWidget {
+  final Color color;
+  const _Connector({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 5.5),
+      child: Container(width: 2, height: 16, color: color),
     );
   }
 }

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'config.dart';
-import 'data/db.dart';
 import 'auth/login_screen.dart';
 import 'auth/role_gate.dart';
+import 'config.dart';
+import 'data/db.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,10 +27,10 @@ class CargoTraceDriverApp extends StatelessWidget {
     return MaterialApp(
       title: 'CargoTrace Driver',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorSchemeSeed: const Color(0xFF2F9BD1),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      // Follow the phone's appearance, like the website follows the OS.
+      themeMode: ThemeMode.system,
       home: const AuthGate(),
     );
   }
