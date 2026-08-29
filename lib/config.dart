@@ -11,6 +11,16 @@ class Config {
 
   /// Deployed Next.js base URL — used later for the GPS ingest endpoint
   /// (/api/track). Set per build with --dart-define=API_BASE_URL=...
+  /// Google Maps key for the Dart side. Native code reads its own key
+  /// (Android manifest placeholder, iOS Info.plist), but the app also needs to
+  /// know at runtime whether a key exists so it can show the map only when it
+  /// will actually work — the iOS SDK crashes if a GoogleMap is created without
+  /// GMSServices.provideAPIKey. Pass at build time:
+  ///   flutter run --dart-define=GOOGLE_MAPS_KEY=AIza...
+  static const googleMapsKey =
+      String.fromEnvironment('GOOGLE_MAPS_KEY', defaultValue: '');
+  static bool get mapsEnabled => googleMapsKey.isNotEmpty;
+
   static const apiBaseUrl =
       String.fromEnvironment('API_BASE_URL', defaultValue: '');
 }

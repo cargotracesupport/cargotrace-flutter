@@ -5,6 +5,16 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+
+// Google Maps key: kept out of git. Read from android/local.properties
+// (googleMapsKey=...) or the GOOGLE_MAPS_KEY environment variable.
+val localProps = java.util.Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val googleMapsKey: String =
+    localProps.getProperty("googleMapsKey") ?: System.getenv("GOOGLE_MAPS_KEY") ?: ""
+
 android {
     namespace = "app.cargotrace.cargotrace_driver"
     compileSdk = flutter.compileSdkVersion
@@ -28,6 +38,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["GOOGLE_MAPS_KEY"] = googleMapsKey
     }
 
     buildTypes {

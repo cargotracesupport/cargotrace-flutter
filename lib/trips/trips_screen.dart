@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/db.dart';
 import '../data/delivery.dart';
+import 'trip_detail_screen.dart';
 import '../theme/tokens.dart';
 import '../widgets/ct_widgets.dart';
 
@@ -134,8 +135,9 @@ class _TripCard extends StatelessWidget {
     return Opacity(
       opacity: trip.isDone ? 0.62 : 1,
       child: CtCard(
-        // Tapping opens trip detail — next milestone.
-        onTap: () {},
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => TripDetailScreen(initial: trip)),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
