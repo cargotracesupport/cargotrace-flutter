@@ -1,6 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/tokens.dart';
+
+/// Brand app bar: the blue→cyan gradient behind a white title, optional
+/// subtitle and trailing actions. Gives every screen a coloured header that
+/// matches the web's brand bar. Two-line when [subtitle] is set.
+class CtHeader extends StatelessWidget implements PreferredSizeWidget {
+  final String title;
+  final String? subtitle;
+  final List<Widget>? actions;
+  final bool automaticallyImplyLeading;
+  const CtHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.actions,
+    this.automaticallyImplyLeading = true,
+  });
+
+  @override
+  Size get preferredSize =>
+      Size.fromHeight(subtitle == null ? kToolbarHeight : 64);
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ct;
+    return AppBar(
+      toolbarHeight: preferredSize.height,
+      automaticallyImplyLeading: automaticallyImplyLeading,
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: c.onAccent,
+      elevation: 0,
+      titleSpacing: CtSpace.md,
+      // White status-bar glyphs read well over the blue gradient.
+      systemOverlayStyle: SystemUiOverlayStyle.light,
+      iconTheme: IconThemeData(color: c.onAccent),
+      actionsIconTheme: IconThemeData(color: c.onAccent),
+      // A solid base guarantees a coloured bar; the gradient sits on top.
+      // (A Container fills the flexibleSpace slot; a bare DecoratedBox would
+      // collapse to zero size inside the AppBar's Stack.)
+      backgroundColor: c.primary,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(gradient: c.gradPrimary),
+      ),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: subtitle == null ? 18 : 20,
+              fontWeight: FontWeight.w800,
+              color: c.onAccent,
+              letterSpacing: -0.2,
+            ),
+          ),
+          if (subtitle != null)
+            Text(
+              subtitle!,
+              style: TextStyle(
+                fontSize: 12,
+                color: c.onAccent.withValues(alpha: 0.85),
+              ),
+            ),
+        ],
+      ),
+      actions: actions,
+    );
+  }
+}
 
 /// Card surface matching the web `.ct-card` (rounded-xl, hairline border,
 /// translucent surface, soft shadow).

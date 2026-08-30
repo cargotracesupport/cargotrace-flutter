@@ -1,0 +1,70 @@
+import 'package:flutter/material.dart';
+
+import '../data/vehicle.dart';
+import '../notifications/notifications_screen.dart';
+import '../profile/profile_screen.dart';
+import '../trips/trips_screen.dart';
+
+/// The signed-in driver's home: three tabs behind a bottom navigation bar —
+/// Home (trips), Notifications, Profile. An [IndexedStack] keeps each tab's
+/// state (and its live Supabase stream) alive while switching.
+class HomeShell extends StatefulWidget {
+  final String? driverName;
+  final String? phone;
+  final Vehicle? vehicle;
+  final VoidCallback onChangeVehicle;
+
+  const HomeShell({
+    super.key,
+    this.driverName,
+    this.phone,
+    this.vehicle,
+    required this.onChangeVehicle,
+  });
+
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends State<HomeShell> {
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final pages = [
+      TripsScreen(driverName: widget.driverName),
+      const NotificationsScreen(),
+      ProfileScreen(
+        driverName: widget.driverName,
+        phone: widget.phone,
+        vehicle: widget.vehicle,
+        onChangeVehicle: widget.onChangeVehicle,
+      ),
+    ];
+
+    return Scaffold(
+      body: IndexedStack(index: _index, children: pages),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: (i) => setState(() => _index = i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.local_shipping_outlined),
+            selectedIcon: Icon(Icons.local_shipping),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.notifications_none_rounded),
+            selectedIcon: Icon(Icons.notifications_rounded),
+            label: 'Notifications',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
+        ],
+      ),
+    );
+  }
+}

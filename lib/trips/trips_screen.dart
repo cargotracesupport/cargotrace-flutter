@@ -52,33 +52,10 @@ class _TripsScreenState extends State<TripsScreen> {
     final c = context.ct;
     final name = widget.driverName?.split(' ').first;
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: CtSpace.md,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              name == null ? 'My trips' : 'Hi, $name',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: c.text,
-              ),
-            ),
-            Text(
-              'Your assigned deliveries',
-              style: TextStyle(fontSize: 12, color: c.muted2),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Sign out',
-            onPressed: () => supabase.auth.signOut(),
-          ),
-          const SizedBox(width: CtSpace.xs),
-        ],
+      appBar: CtHeader(
+        title: name == null ? 'My trips' : 'Hi, $name',
+        subtitle: 'Your assigned deliveries',
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
         top: false,

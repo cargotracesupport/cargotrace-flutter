@@ -40,10 +40,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   Widget build(BuildContext context) {
     final c = context.ct;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.initial.reference ?? 'Delivery'),
-        titleSpacing: 0,
-      ),
+      appBar: CtHeader(title: widget.initial.reference ?? 'Delivery'),
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: _stream,
         builder: (context, snap) {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/db.dart';
 import '../theme/tokens.dart';
-import '../trips/trips_screen.dart';
+import '../vehicle/vehicle_gate.dart';
 import '../widgets/ct_widgets.dart';
 
 /// After login, loads the user's role from `profiles` and routes:
@@ -31,7 +31,7 @@ class _RoleGateState extends State<RoleGate> {
 
   Future<Map<String, dynamic>> _load() => supabase
       .from('profiles')
-      .select('role, full_name')
+      .select('role, full_name, phone, vehicle_id')
       .eq('id', widget.userId)
       .single();
 
@@ -56,7 +56,15 @@ class _RoleGateState extends State<RoleGate> {
         }
         final role = snap.data?['role'] as String?;
         final name = snap.data?['full_name'] as String?;
-        if (role == 'driver') return TripsScreen(driverName: name);
+        final phone = snap.data?['phone'] as String?;
+        final vehicleId = snap.data?['vehicle_id'] as String?;
+        if (role == 'driver') {
+          return VehicleGate(
+            driverName: name,
+            phone: phone,
+            initialVehicleId: vehicleId,
+          );
+        }
         return _Gate(
           icon: Icons.desktop_windows_outlined,
           title: 'This app is for drivers',
