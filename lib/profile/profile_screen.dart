@@ -11,14 +11,12 @@ class ProfileScreen extends StatelessWidget {
   final String? driverName;
   final String? phone;
   final Vehicle? vehicle;
-  final VoidCallback onChangeVehicle;
 
   const ProfileScreen({
     super.key,
     this.driverName,
     this.phone,
     this.vehicle,
-    required this.onChangeVehicle,
   });
 
   @override
@@ -108,10 +106,6 @@ class ProfileScreen extends StatelessWidget {
                     icon: Icons.local_shipping_outlined,
                     label: 'Vehicle number',
                     value: vehicle?.number ?? 'Not set',
-                    trailing: TextButton(
-                      onPressed: onChangeVehicle,
-                      child: const Text('Change'),
-                    ),
                   ),
                   if (vehicle?.subtitle != null) ...[
                     const Divider(height: CtSpace.lg),
@@ -172,12 +166,10 @@ class _Line extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final Widget? trailing;
   const _Line({
     required this.icon,
     required this.label,
     required this.value,
-    this.trailing,
   });
 
   @override
@@ -213,7 +205,6 @@ class _Line extends StatelessWidget {
             ],
           ),
         ),
-        if (trailing != null) trailing!,
       ],
     );
   }

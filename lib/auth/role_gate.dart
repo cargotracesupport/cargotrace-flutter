@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../data/db.dart';
+import '../data/vehicle.dart';
+import '../shell/home_shell.dart';
 import '../theme/tokens.dart';
-import '../vehicle/vehicle_gate.dart';
 import '../widgets/ct_widgets.dart';
 
 /// After login, loads the user's role from `profiles` and routes:
@@ -21,7 +22,7 @@ class RoleGate extends StatefulWidget {
 }
 
 class _RoleGateState extends State<RoleGate> {
-  late Future<Map<String, dynamic>> _profile;
+  late Future<_Loaded> _profile;
 
   @override
   void initState() {
@@ -29,15 +30,32 @@ class _RoleGateState extends State<RoleGate> {
     _profile = _load();
   }
 
-  Future<Map<String, dynamic>> _load() => supabase
-      .from('profiles')
-      .select('role, full_name, phone, vehicle_id')
-      .eq('id', widget.userId)
-      .single();
+  /// Two steps rather than a PostgREST embed: `profiles.vehicle_id` has no FK
+  /// relationship the API can join on, so the vehicle is fetched by id.
+  Future<_Loaded> _load() async {
+    final p = await supabase
+        .from('profiles')
+        .select('role, full_name, phone, vehicle_id')
+        .eq('id', widget.userId)
+        .single();
+    Vehicle? vehicle;
+    final vid = p['vehicle_id'] as String?;
+    if (vid != null) {
+      final rows =
+          await supabase.from('vehicles').select('id, plate, name').eq('id', vid);
+      if (rows.isNotEmpty) vehicle = Vehicle.fromMap(rows.first);
+    }
+    return _Loaded(
+      role: p['role'] as String?,
+      name: p['full_name'] as String?,
+      phone: p['phone'] as String?,
+      vehicle: vehicle,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>>(
+    return FutureBuilder<_Loaded>(
       future: _profile,
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
@@ -54,15 +72,12 @@ class _RoleGateState extends State<RoleGate> {
             retry: () => setState(() => _profile = _load()),
           );
         }
-        final role = snap.data?['role'] as String?;
-        final name = snap.data?['full_name'] as String?;
-        final phone = snap.data?['phone'] as String?;
-        final vehicleId = snap.data?['vehicle_id'] as String?;
+        final role = snap.data?.role;
         if (role == 'driver') {
-          return VehicleGate(
-            driverName: name,
-            phone: phone,
-            initialVehicleId: vehicleId,
+          return HomeShell(
+            driverName: snap.data?.name,
+            phone: snap.data?.phone,
+            vehicle: snap.data?.vehicle,
           );
         }
         return _Gate(
@@ -74,6 +89,16 @@ class _RoleGateState extends State<RoleGate> {
       },
     );
   }
+}
+
+/// What [RoleGate] needs after loading: the driver's role, name, phone and
+/// resolved vehicle.
+class _Loaded {
+  final String? role;
+  final String? name;
+  final String? phone;
+  final Vehicle? vehicle;
+  const _Loaded({this.role, this.name, this.phone, this.vehicle});
 }
 
 class _Gate extends StatelessWidget {

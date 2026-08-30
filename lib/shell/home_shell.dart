@@ -12,14 +12,12 @@ class HomeShell extends StatefulWidget {
   final String? driverName;
   final String? phone;
   final Vehicle? vehicle;
-  final VoidCallback onChangeVehicle;
 
   const HomeShell({
     super.key,
     this.driverName,
     this.phone,
     this.vehicle,
-    required this.onChangeVehicle,
   });
 
   @override
@@ -38,7 +36,6 @@ class _HomeShellState extends State<HomeShell> {
         driverName: widget.driverName,
         phone: widget.phone,
         vehicle: widget.vehicle,
-        onChangeVehicle: widget.onChangeVehicle,
       ),
     ];
 

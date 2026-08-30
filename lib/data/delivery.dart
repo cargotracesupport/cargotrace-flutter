@@ -13,7 +13,9 @@ class Delivery {
   final double? originLat, originLng;
   final double? destLat, destLng;
   final double? lastLat, lastLng;
+  final DateTime? startedAt;
   final DateTime? pickedUpAt;
+  final DateTime? deliveredAt;
 
   const Delivery({
     required this.id,
@@ -30,10 +32,14 @@ class Delivery {
     this.destLng,
     this.lastLat,
     this.lastLng,
+    this.startedAt,
     this.pickedUpAt,
+    this.deliveredAt,
   });
 
   static double? _d(dynamic v) => v == null ? null : (v as num).toDouble();
+  static DateTime? _t(dynamic v) =>
+      v == null ? null : DateTime.tryParse(v as String);
 
   factory Delivery.fromMap(Map<String, dynamic> m) => Delivery(
         id: m['id'] as String,
@@ -50,13 +56,24 @@ class Delivery {
         destLng: _d(m['dest_lng']),
         lastLat: _d(m['last_lat']),
         lastLng: _d(m['last_lng']),
-        pickedUpAt: m['picked_up_at'] == null
-            ? null
-            : DateTime.tryParse(m['picked_up_at'] as String),
+        startedAt: _t(m['started_at']),
+        pickedUpAt: _t(m['picked_up_at']),
+        deliveredAt: _t(m['delivered_at']),
       );
 
   bool get hasOrigin => originLat != null && originLng != null;
   bool get hasDest => destLat != null && destLng != null;
   bool get hasPosition => lastLat != null && lastLng != null;
   bool get isDone => status == 'delivered';
+  bool get isEnRoute => status == 'en_route';
+  bool get isPickedUp => pickedUpAt != null;
+
+  /// Where the driver is heading right now: the pickup until goods are on
+  /// board, the drop-off after. Null when that point has no coordinates.
+  ({double lat, double lng})? get navTarget {
+    if (!isPickedUp && hasOrigin) return (lat: originLat!, lng: originLng!);
+    if (hasDest) return (lat: destLat!, lng: destLng!);
+    if (hasOrigin) return (lat: originLat!, lng: originLng!);
+    return null;
+  }
 }

@@ -6,6 +6,7 @@ import '../data/db.dart';
 import '../data/delivery.dart';
 import '../theme/tokens.dart';
 import '../widgets/ct_widgets.dart';
+import 'nav_screen.dart';
 
 /// One delivery, live. Map on top (pickup, drop-off, truck), journey and
 /// customer details below. Streams the row so status/position changes from
@@ -21,6 +22,7 @@ class TripDetailScreen extends StatefulWidget {
 class _TripDetailScreenState extends State<TripDetailScreen> {
   late final Stream<List<Map<String, dynamic>>> _stream;
   GoogleMapController? _map;
+  bool _busy = false;
 
   @override
   void initState() {
@@ -36,18 +38,103 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     super.dispose();
   }
 
+  static String _now() => DateTime.now().toUtc().toIso8601String();
+
+  /// Applies a status/timestamp change to this delivery. The realtime stream
+  /// reflects the new state, so there's nothing to set locally.
+  Future<bool> _apply(String id, Map<String, dynamic> patch) async {
+    setState(() => _busy = true);
+    try {
+      await supabase.from('deliveries').update(patch).eq('id', id);
+      return true;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update. Try again.')),
+        );
+      }
+      return false;
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _start(Delivery trip) async {
+    final ok = await _apply(trip.id, {
+      'status': 'en_route',
+      'started_at': _now(),
+    });
+    if (ok && mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => NavScreen(initial: trip)),
+      );
+    }
+  }
+
+  Future<void> _pickup(Delivery trip) =>
+      _apply(trip.id, {'picked_up_at': _now()});
+
+  Future<void> _deliver(Delivery trip) async {
+    // Guard: goods must be picked up and a drop-off must exist first.
+    if (!trip.isPickedUp) {
+      _snack('Confirm pick-up before marking delivered.');
+      return;
+    }
+    if (!trip.hasDest && trip.destLabel == null) {
+      _snack('No drop-off set for this delivery yet.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mark as delivered?'),
+        content: const Text(
+          'Confirm the goods have been handed over at the drop-off. '
+          'This completes the trip.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Mark delivered'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _apply(trip.id, {'status': 'delivered', 'delivered_at': _now()});
+  }
+
+  void _openNav(Delivery trip) => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => NavScreen(initial: trip)),
+      );
+
+  void _snack(String msg) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(msg)));
+
   @override
   Widget build(BuildContext context) {
     final c = context.ct;
-    return Scaffold(
-      appBar: CtHeader(title: widget.initial.reference ?? 'Delivery'),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _stream,
-        builder: (context, snap) {
-          final trip = (snap.data?.isNotEmpty ?? false)
-              ? Delivery.fromMap(snap.data!.first)
-              : widget.initial;
-          return ListView(
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _stream,
+      builder: (context, snap) {
+        final trip = (snap.data?.isNotEmpty ?? false)
+            ? Delivery.fromMap(snap.data!.first)
+            : widget.initial;
+        return Scaffold(
+          appBar: CtHeader(title: trip.reference ?? 'Delivery'),
+          bottomNavigationBar: _ActionBar(
+            trip: trip,
+            busy: _busy,
+            onStart: () => _start(trip),
+            onPickup: () => _pickup(trip),
+            onDeliver: () => _deliver(trip),
+            onNavigate: () => _openNav(trip),
+          ),
+          body: ListView(
             padding: const EdgeInsets.fromLTRB(
                 CtSpace.md, CtSpace.sm, CtSpace.md, CtSpace.xl),
             children: [
@@ -103,9 +190,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 ),
               ),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -230,6 +317,144 @@ class _MapCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: child,
+    );
+  }
+}
+
+/// The sticky bottom bar whose action depends on where the trip is:
+///  - not started        → Start trip (also opens navigation)
+///  - en route, no pickup → Navigate + Confirm pick-up
+///  - en route, picked up → Navigate + Mark delivered (needs a drop-off)
+///  - delivered           → a "Delivered" confirmation
+///  - cancelled           → nothing
+class _ActionBar extends StatelessWidget {
+  final Delivery trip;
+  final bool busy;
+  final VoidCallback onStart;
+  final VoidCallback onPickup;
+  final VoidCallback onDeliver;
+  final VoidCallback onNavigate;
+
+  const _ActionBar({
+    required this.trip,
+    required this.busy,
+    required this.onStart,
+    required this.onPickup,
+    required this.onDeliver,
+    required this.onNavigate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ct;
+
+    if (trip.status == 'cancelled') return const SizedBox.shrink();
+
+    Widget content;
+    if (trip.isDone) {
+      content = Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.check_circle_rounded, color: c.green, size: 22),
+          const SizedBox(width: CtSpace.sm),
+          Text(
+            'Delivered',
+            style: TextStyle(
+              color: c.green,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      );
+    } else if (!trip.isEnRoute) {
+      // pending / assigned / awaiting_dropoff — not started yet.
+      content = CtPrimaryButton(
+        label: 'Start trip',
+        icon: Icons.play_arrow_rounded,
+        loading: busy,
+        onPressed: onStart,
+      );
+    } else if (!trip.isPickedUp) {
+      content = Row(
+        children: [
+          Expanded(child: _NavButton(onTap: busy ? null : onNavigate)),
+          const SizedBox(width: CtSpace.sm),
+          Expanded(
+            child: CtPrimaryButton(
+              label: 'Confirm pick-up',
+              loading: busy,
+              onPressed: onPickup,
+            ),
+          ),
+        ],
+      );
+    } else {
+      final canDeliver = trip.hasDest || trip.destLabel != null;
+      content = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(child: _NavButton(onTap: busy ? null : onNavigate)),
+              const SizedBox(width: CtSpace.sm),
+              Expanded(
+                child: CtPrimaryButton(
+                  label: 'Mark delivered',
+                  loading: busy,
+                  onPressed: canDeliver ? onDeliver : null,
+                ),
+              ),
+            ],
+          ),
+          if (!canDeliver) ...[
+            const SizedBox(height: CtSpace.sm),
+            Text(
+              'Waiting for the customer to set a drop-off.',
+              style: TextStyle(color: c.muted, fontSize: 12),
+            ),
+          ],
+        ],
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: c.s1,
+        border: Border(top: BorderSide(color: c.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(CtSpace.md),
+          child: content,
+        ),
+      ),
+    );
+  }
+}
+
+/// Outlined secondary button matching the primary's 52dp height.
+class _NavButton extends StatelessWidget {
+  final VoidCallback? onTap;
+  const _NavButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ct;
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: const Icon(Icons.navigation_rounded, size: 18),
+      label: const Text('Navigate'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: c.primary,
+        minimumSize: const Size(0, 52),
+        side: BorderSide(color: c.primary.withValues(alpha: 0.5)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(CtRadius.lg),
+        ),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+      ),
     );
   }
 }
