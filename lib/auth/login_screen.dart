@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/db.dart';
@@ -260,22 +261,10 @@ class _Brand extends StatelessWidget {
     final c = context.ct;
     return Column(
       children: [
-        Container(
-          height: 64,
-          width: 64,
-          decoration: BoxDecoration(
-            gradient: c.gradPrimary,
-            borderRadius: BorderRadius.circular(CtRadius.xl),
-            boxShadow: [
-              BoxShadow(
-                color: c.primary.withValues(alpha: 0.42),
-                blurRadius: 26,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Icon(Icons.local_shipping_rounded,
-              size: 34, color: c.onAccent),
+        SvgPicture.asset(
+          'assets/illustrations/truck.svg',
+          height: 132,
+          semanticsLabel: 'Delivery truck',
         ),
         const SizedBox(height: CtSpace.md),
         Text(

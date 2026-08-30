@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/vehicle.dart';
-import '../notifications/notifications_screen.dart';
+import '../deliveries/deliveries_screen.dart';
 import '../profile/profile_screen.dart';
 import '../trips/trips_screen.dart';
 
@@ -31,7 +31,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final pages = [
       TripsScreen(driverName: widget.driverName),
-      const NotificationsScreen(),
+      const DeliveriesScreen(),
       ProfileScreen(
         driverName: widget.driverName,
         phone: widget.phone,
@@ -51,9 +51,9 @@ class _HomeShellState extends State<HomeShell> {
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.notifications_none_rounded),
-            selectedIcon: Icon(Icons.notifications_rounded),
-            label: 'Notifications',
+            icon: Icon(Icons.inventory_2_outlined),
+            selectedIcon: Icon(Icons.inventory_2_rounded),
+            label: 'Deliveries',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline_rounded),

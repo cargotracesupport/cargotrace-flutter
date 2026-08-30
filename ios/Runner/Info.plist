@@ -26,10 +26,8 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>GMapsAPIKey</key>
 	<string>$(GOOGLE_MAPS_KEY)</string>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>comgooglemaps</string>
-	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>CargoTrace uses your location to navigate to pickups and drop-offs and to share your live position on your active delivery.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

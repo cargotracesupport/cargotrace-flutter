@@ -72,6 +72,42 @@ class CtHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
+/// A small "DRIVER" pill for the gradient header — translucent white so it
+/// reads on the blue bar. Marks the signed-in role at a glance.
+class CtDriverBadge extends StatelessWidget {
+  const CtDriverBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ct;
+    return Container(
+      margin: const EdgeInsets.only(right: CtSpace.md),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: c.onAccent.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.onAccent.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.badge_outlined, size: 14, color: c.onAccent),
+          const SizedBox(width: 5),
+          Text(
+            'DRIVER',
+            style: TextStyle(
+              color: c.onAccent,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Card surface matching the web `.ct-card` (rounded-xl, hairline border,
 /// translucent surface, soft shadow).
 class CtCard extends StatelessWidget {

@@ -56,6 +56,7 @@ class _TripsScreenState extends State<TripsScreen> {
         title: name == null ? 'My trips' : 'Hi, $name',
         subtitle: 'Your assigned deliveries',
         automaticallyImplyLeading: false,
+        actions: const [CtDriverBadge()],
       ),
       body: SafeArea(
         top: false,
