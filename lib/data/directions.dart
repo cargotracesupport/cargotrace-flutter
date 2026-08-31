@@ -79,6 +79,8 @@ Future<RouteResult?> fetchDrivingRoute(LatLng origin, LatLng dest) async {
         'travelMode': 'DRIVE',
         'routingPreference': 'TRAFFIC_AWARE',
         'polylineEncoding': 'ENCODED_POLYLINE',
+        'languageCode': 'en-US',
+        'units': 'METRIC',
       }),
     );
     if (res.statusCode != 200) return null;
