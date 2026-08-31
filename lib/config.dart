@@ -21,6 +21,11 @@ class Config {
       String.fromEnvironment('GOOGLE_MAPS_KEY', defaultValue: '');
   static bool get mapsEnabled => googleMapsKey.isNotEmpty;
 
+  /// The iOS bundle id, sent as `X-Ios-Bundle-Identifier` on Routes API calls
+  /// so an iOS-app-restricted Maps key accepts them (matches the value in
+  /// ios/Runner CFBundleIdentifier).
+  static const iosBundleId = 'app.cargotrace.driver';
+
   static const apiBaseUrl =
       String.fromEnvironment('API_BASE_URL', defaultValue: '');
 }
