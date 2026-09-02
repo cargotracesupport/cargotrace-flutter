@@ -41,6 +41,7 @@ class _NavScreenState extends State<NavScreen> {
   int _stepIndex = 0;
 
   bool _follow = true;
+  bool _started = false; // route preview until the driver taps Start
   DateTime? _lastReroute;
 
   // Throttle writing the live position back to the delivery.
@@ -106,7 +107,7 @@ class _NavScreenState extends State<NavScreen> {
     });
     _prev = here;
 
-    if (_follow) {
+    if (_started && _follow) {
       _map?.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(
         target: here,
         zoom: 17,
@@ -215,6 +216,22 @@ class _NavScreenState extends State<NavScreen> {
     }
   }
 
+  /// Leaves the route preview and begins guided, camera-following navigation.
+  void _onStart() {
+    setState(() {
+      _started = true;
+      _follow = true;
+    });
+    if (_me != null) {
+      _map?.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(
+        target: LatLng(_me!.latitude, _me!.longitude),
+        zoom: 17,
+        tilt: 55,
+        bearing: _bearing,
+      )));
+    }
+  }
+
   Delivery _latestTrip = _placeholder;
   static final Delivery _placeholder =
       const Delivery(id: '', status: 'pending');
@@ -239,31 +256,46 @@ class _NavScreenState extends State<NavScreen> {
                 top: MediaQuery.of(context).padding.top + 8,
                 left: 12,
                 right: 12,
-                child: _ManeuverBanner(
-                  trip: trip,
-                  route: _route,
-                  straight: _straight,
-                  stepIndex: _stepIndex,
-                  me: _me,
-                  locError: _locError,
-                  onBack: () => Navigator.of(context).pop(),
-                ),
+                child: _started
+                    ? _ManeuverBanner(
+                        trip: trip,
+                        route: _route,
+                        straight: _straight,
+                        stepIndex: _stepIndex,
+                        me: _me,
+                        locError: _locError,
+                        onBack: () => Navigator.of(context).pop(),
+                      )
+                    : _PreviewHeader(
+                        trip: trip,
+                        onBack: () => Navigator.of(context).pop(),
+                      ),
               ),
-              Positioned(
-                right: 16,
-                bottom: 120 + MediaQuery.of(context).padding.bottom,
-                child: _RoundBtn(
-                  icon: _follow
-                      ? Icons.navigation_rounded
-                      : Icons.navigation_outlined,
-                  onTap: _recenter,
+              if (_started)
+                Positioned(
+                  right: 16,
+                  bottom: 120 + MediaQuery.of(context).padding.bottom,
+                  child: _RoundBtn(
+                    icon: _follow
+                        ? Icons.navigation_rounded
+                        : Icons.navigation_outlined,
+                    onTap: _recenter,
+                  ),
                 ),
-              ),
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: _EtaBar(trip: trip, route: _route, straight: _straight),
+                child: _started
+                    ? _EtaBar(trip: trip, route: _route, straight: _straight)
+                    : _StartPanel(
+                        trip: trip,
+                        route: _route,
+                        straight: _straight,
+                        locError: _locError,
+                        ready: _me != null && _route != null,
+                        onStart: _onStart,
+                      ),
               ),
             ],
           );
@@ -331,13 +363,13 @@ class _NavScreenState extends State<NavScreen> {
     };
 
     return GoogleMap(
-      initialCameraPosition: _me != null
+      initialCameraPosition: _started && _me != null
           ? CameraPosition(
               target: LatLng(_me!.latitude, _me!.longitude),
               zoom: 17,
               tilt: 55,
               bearing: _bearing)
-          : CameraPosition(target: LatLng(target.lat, target.lng), zoom: 15),
+          : CameraPosition(target: LatLng(target.lat, target.lng), zoom: 12),
       markers: markers,
       polylines: polylines,
       myLocationEnabled: true,
@@ -345,34 +377,38 @@ class _NavScreenState extends State<NavScreen> {
       mapToolbarEnabled: false,
       zoomControlsEnabled: false,
       compassEnabled: false,
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 72,
+        bottom: 150 + MediaQuery.of(context).padding.bottom,
+      ),
       onCameraMoveStarted: () {
-        // A manual pan drops follow; recenter re-enables it.
-        if (_follow) setState(() => _follow = false);
+        // A manual pan drops follow (only meaningful once guiding).
+        if (_started && _follow) setState(() => _follow = false);
       },
       onMapCreated: (m) {
         _map = m;
-        if (_me == null) {
-          final pts = <LatLng>[
-            if (trip.hasOrigin) LatLng(trip.originLat!, trip.originLng!),
-            if (trip.hasDest) LatLng(trip.destLat!, trip.destLng!),
-          ];
-          if (pts.length > 1) {
-            var minLat = pts.first.latitude, maxLat = minLat;
-            var minLng = pts.first.longitude, maxLng = minLng;
-            for (final p in pts) {
-              if (p.latitude < minLat) minLat = p.latitude;
-              if (p.latitude > maxLat) maxLat = p.latitude;
-              if (p.longitude < minLng) minLng = p.longitude;
-              if (p.longitude > maxLng) maxLng = p.longitude;
-            }
-            m.animateCamera(CameraUpdate.newLatLngBounds(
-              LatLngBounds(
-                southwest: LatLng(minLat, minLng),
-                northeast: LatLng(maxLat, maxLng),
-              ),
-              72,
-            ));
+        // Preview: frame the whole route (driver + pickup + drop-off).
+        final pts = <LatLng>[
+          if (_me != null) LatLng(_me!.latitude, _me!.longitude),
+          if (trip.hasOrigin) LatLng(trip.originLat!, trip.originLng!),
+          if (trip.hasDest) LatLng(trip.destLat!, trip.destLng!),
+        ];
+        if (pts.length > 1) {
+          var minLat = pts.first.latitude, maxLat = minLat;
+          var minLng = pts.first.longitude, maxLng = minLng;
+          for (final p in pts) {
+            if (p.latitude < minLat) minLat = p.latitude;
+            if (p.latitude > maxLat) maxLat = p.latitude;
+            if (p.longitude < minLng) minLng = p.longitude;
+            if (p.longitude > maxLng) maxLng = p.longitude;
           }
+          m.animateCamera(CameraUpdate.newLatLngBounds(
+            LatLngBounds(
+              southwest: LatLng(minLat, minLng),
+              northeast: LatLng(maxLat, maxLng),
+            ),
+            56,
+          ));
         }
       },
     );
@@ -549,6 +585,157 @@ class _EtaBar extends StatelessWidget {
               straight ? 'Direct line' : '…',
               style: TextStyle(color: c.muted, fontSize: 13),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Route-preview header (before Start): back button + where we're heading.
+class _PreviewHeader extends StatelessWidget {
+  final Delivery trip;
+  final VoidCallback onBack;
+  const _PreviewHeader({required this.trip, required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ct;
+    final toPickup = !trip.isPickedUp;
+    final address =
+        (toPickup ? trip.originLabel : trip.destLabel) ?? 'Destination';
+    return Material(
+      color: c.s1,
+      borderRadius: BorderRadius.circular(CtRadius.lg),
+      elevation: 5,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: onBack,
+              icon: Icon(Icons.arrow_back_rounded, color: c.text),
+              visualDensity: VisualDensity.compact,
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    toPickup ? 'ROUTE TO PICK-UP' : 'ROUTE TO DROP-OFF',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: c.muted,
+                    ),
+                  ),
+                  Text(
+                    address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 14, color: c.text, height: 1.2),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: CtSpace.sm),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom panel shown during route preview: destination + ETA and a big Start
+/// button that begins guided navigation.
+class _StartPanel extends StatelessWidget {
+  final Delivery trip;
+  final RouteResult? route;
+  final bool straight;
+  final String? locError;
+  final bool ready;
+  final VoidCallback onStart;
+  const _StartPanel({
+    required this.trip,
+    required this.route,
+    required this.straight,
+    required this.locError,
+    required this.ready,
+    required this.onStart,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ct;
+    final toPickup = !trip.isPickedUp;
+    final hasEta = route != null && !straight && route!.durationSeconds > 0;
+    return Container(
+      decoration: BoxDecoration(
+        color: c.s1,
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(CtRadius.xl)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F1E46).withValues(alpha: 0.16),
+            blurRadius: 24,
+            offset: const Offset(0, -6),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.fromLTRB(CtSpace.lg, CtSpace.md, CtSpace.lg,
+          CtSpace.md + MediaQuery.of(context).padding.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(toPickup ? Icons.inventory_2_rounded : Icons.place_rounded,
+                  color: toPickup ? c.primary : c.accent, size: 22),
+              const SizedBox(width: CtSpace.sm),
+              Expanded(
+                child: Text(
+                  toPickup ? 'To pick-up' : 'To drop-off',
+                  style: TextStyle(
+                      color: c.muted2,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
+              if (hasEta)
+                Text(
+                  '${route!.durationText}  ·  ${route!.distanceText}',
+                  style: TextStyle(
+                    color: c.green,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: CtSpace.md),
+          CtPrimaryButton(
+            label: 'Start',
+            icon: Icons.navigation_rounded,
+            onPressed: (ready && locError == null) ? onStart : null,
+          ),
+          if (locError != null) ...[
+            const SizedBox(height: CtSpace.sm),
+            Text(
+              locError!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: c.red, fontSize: 12),
+            ),
+          ] else if (!ready) ...[
+            const SizedBox(height: CtSpace.sm),
+            Text(
+              'Finding the best route…',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: c.muted, fontSize: 12),
+            ),
+          ],
         ],
       ),
     );

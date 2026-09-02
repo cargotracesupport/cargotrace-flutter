@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../config.dart';
@@ -7,6 +10,10 @@ import '../data/delivery.dart';
 import '../theme/tokens.dart';
 import '../widgets/ct_widgets.dart';
 import 'nav_screen.dart';
+
+/// How close (metres) the driver must be to the pickup / drop-off for the
+/// Confirm pick-up / Mark delivered actions to unlock.
+const double kActionGeofenceMeters = 2000;
 
 /// One delivery, live. Map on top (pickup, drop-off, truck), journey and
 /// customer details below. Streams the row so status/position changes from
@@ -24,16 +31,51 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   GoogleMapController? _map;
   bool _busy = false;
 
+  // Driver's live position, used to geofence the pick-up / deliver actions.
+  StreamSubscription<Position>? _posSub;
+  LatLng? _me;
+  bool _locBlocked = false; // GPS off or permission denied
+
   @override
   void initState() {
     super.initState();
     _stream = supabase
         .from('deliveries')
         .stream(primaryKey: ['id']).eq('id', widget.initial.id);
+    _initLocation();
+  }
+
+  Future<void> _initLocation() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        if (mounted) setState(() => _locBlocked = true);
+        return;
+      }
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _locBlocked = true);
+        return;
+      }
+      _posSub = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 20,
+        ),
+      ).listen((p) {
+        if (mounted) setState(() => _me = LatLng(p.latitude, p.longitude));
+      });
+    } catch (_) {
+      if (mounted) setState(() => _locBlocked = true);
+    }
   }
 
   @override
   void dispose() {
+    _posSub?.cancel();
     _map?.dispose();
     super.dispose();
   }
@@ -129,6 +171,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           bottomNavigationBar: _ActionBar(
             trip: trip,
             busy: _busy,
+            me: _me,
+            locBlocked: _locBlocked,
             onStart: () => _start(trip),
             onPickup: () => _pickup(trip),
             onDeliver: () => _deliver(trip),
@@ -330,6 +374,8 @@ class _MapCard extends StatelessWidget {
 class _ActionBar extends StatelessWidget {
   final Delivery trip;
   final bool busy;
+  final LatLng? me;
+  final bool locBlocked;
   final VoidCallback onStart;
   final VoidCallback onPickup;
   final VoidCallback onDeliver;
@@ -338,11 +384,42 @@ class _ActionBar extends StatelessWidget {
   const _ActionBar({
     required this.trip,
     required this.busy,
+    required this.me,
+    required this.locBlocked,
     required this.onStart,
     required this.onPickup,
     required this.onDeliver,
     required this.onNavigate,
   });
+
+  static String _dist(double m) =>
+      m < 1000 ? '${m.round()} m' : '${(m / 1000).toStringAsFixed(1)} km';
+
+  /// Whether an on-site action is allowed, given the target's coordinates.
+  /// Returns a hint to show when it isn't. When the target has no coordinates
+  /// the action can't be geofenced, so it's allowed.
+  ({bool ok, String? hint}) _geofence({
+    required bool hasCoords,
+    double? lat,
+    double? lng,
+    required String place,
+  }) {
+    if (!hasCoords) return (ok: true, hint: null);
+    if (locBlocked) {
+      return (ok: false, hint: 'Turn on location to confirm at the $place.');
+    }
+    if (me == null) return (ok: false, hint: 'Getting your location…');
+    final d = Geolocator.distanceBetween(
+        me!.latitude, me!.longitude, lat!, lng!);
+    if (d > kActionGeofenceMeters) {
+      return (
+        ok: false,
+        hint: "You're ${_dist(d)} from the $place — get within "
+            '${(kActionGeofenceMeters / 1000).toStringAsFixed(0)} km.',
+      );
+    }
+    return (ok: true, hint: null);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -376,21 +453,43 @@ class _ActionBar extends StatelessWidget {
         onPressed: onStart,
       );
     } else if (!trip.isPickedUp) {
-      content = Row(
+      final g = _geofence(
+        hasCoords: trip.hasOrigin,
+        lat: trip.originLat,
+        lng: trip.originLng,
+        place: 'pick-up',
+      );
+      content = Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(child: _NavButton(onTap: busy ? null : onNavigate)),
-          const SizedBox(width: CtSpace.sm),
-          Expanded(
-            child: CtPrimaryButton(
-              label: 'Confirm pick-up',
-              loading: busy,
-              onPressed: onPickup,
-            ),
+          Row(
+            children: [
+              Expanded(child: _NavButton(onTap: busy ? null : onNavigate)),
+              const SizedBox(width: CtSpace.sm),
+              Expanded(
+                child: CtPrimaryButton(
+                  label: 'Confirm pick-up',
+                  loading: busy,
+                  onPressed: g.ok ? onPickup : null,
+                ),
+              ),
+            ],
           ),
+          if (g.hint != null) _Hint(g.hint!),
         ],
       );
     } else {
-      final canDeliver = trip.hasDest || trip.destLabel != null;
+      final hasDrop = trip.hasDest || trip.destLabel != null;
+      final g = _geofence(
+        hasCoords: trip.hasDest,
+        lat: trip.destLat,
+        lng: trip.destLng,
+        place: 'drop-off',
+      );
+      final canDeliver = hasDrop && g.ok;
+      final hint = !hasDrop
+          ? 'Waiting for the customer to set a drop-off.'
+          : g.hint;
       content = Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -407,13 +506,7 @@ class _ActionBar extends StatelessWidget {
               ),
             ],
           ),
-          if (!canDeliver) ...[
-            const SizedBox(height: CtSpace.sm),
-            Text(
-              'Waiting for the customer to set a drop-off.',
-              style: TextStyle(color: c.muted, fontSize: 12),
-            ),
-          ],
+          if (hint != null) _Hint(hint),
         ],
       );
     }
@@ -429,6 +522,34 @@ class _ActionBar extends StatelessWidget {
           padding: const EdgeInsets.all(CtSpace.md),
           child: content,
         ),
+      ),
+    );
+  }
+}
+
+/// A small centred hint line under the action buttons (e.g. geofence distance).
+class _Hint extends StatelessWidget {
+  final String text;
+  const _Hint(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ct;
+    return Padding(
+      padding: const EdgeInsets.only(top: CtSpace.sm),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.my_location_rounded, size: 13, color: c.muted),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: c.muted, fontSize: 12),
+            ),
+          ),
+        ],
       ),
     );
   }
