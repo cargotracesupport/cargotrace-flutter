@@ -157,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: CtSpace.xs),
                         Text(
-                          'Use your CargoTrace driver account.',
+                          'Use your Goodswala driver account.',
                           style: TextStyle(color: c.muted2),
                         ),
                         const SizedBox(height: CtSpace.lg),
@@ -268,7 +268,7 @@ class _Brand extends StatelessWidget {
         ),
         const SizedBox(height: CtSpace.md),
         Text(
-          'CargoTrace',
+          'Goodswala',
           style: TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.w800,
