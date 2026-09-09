@@ -25,7 +25,7 @@ class CargoTraceDriverApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CargoTrace Driver',
+      title: 'Goodswala',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
