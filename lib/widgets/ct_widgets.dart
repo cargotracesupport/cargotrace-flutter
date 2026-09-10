@@ -452,9 +452,12 @@ class CtCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
+          // Opaque both ends. A translucent stop let the login backdrop bleed
+          // through the card and wrecked the form's legibility; alphaBlend
+          // keeps the same subtle tint without the transparency.
           colors: brightness == Brightness.dark
               ? [c.s2, c.s1]
-              : [c.s1, c.s2.withValues(alpha: 0.55)],
+              : [c.s1, Color.alphaBlend(c.s2.withValues(alpha: 0.55), c.s1)],
         ),
         borderRadius: radius,
         border: Border.all(color: c.border),
