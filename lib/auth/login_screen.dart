@@ -88,36 +88,44 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
+            child: Center(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
                   horizontal: CtSpace.lg,
                   vertical: CtSpace.lg,
                 ),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight - CtSpace.lg * 2,
-                  ),
-                  child: Column(
-                    // Wordmark up in the sky, form pinned to the bottom, the
-                    // truck filling the space between.
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Goodswala',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          // Fixed dark ink: this sits on the bright sky of the
-                          // backdrop in light and dark themes.
-                          color: Color(0xFF0F1727),
-                          letterSpacing: -0.6,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Wordmark sits directly above the card. Fixed colours:
+                        // the backdrop is bright in light and dark themes, and
+                        // the text can land on the sky or the truck.
+                        const Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(text: 'Goods'),
+                              TextSpan(
+                                text: 'wala',
+                                style: TextStyle(color: Color(0xFF2563EB)),
+                              ),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F1727),
+                            letterSpacing: -0.6,
+                            shadows: [
+                              Shadow(color: Color(0xCCFFFFFF), blurRadius: 14),
+                            ],
+                          ),
                         ),
-                      ),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 420),
-                        child: Column(
+                        const SizedBox(height: CtSpace.md),
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             CtCard(
@@ -212,14 +220,22 @@ class _LoginScreenState extends State<LoginScreen> {
                               'Accounts are created by your administrator.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Color(0xB30F1727),
+                                // Same treatment as the wordmark: this can land
+                                // on the sky, the road or the container.
+                                color: Color(0xCC0F1727),
                                 fontSize: 12,
+                                shadows: [
+                                  Shadow(
+                                    color: Color(0xCCFFFFFF),
+                                    blurRadius: 10,
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
