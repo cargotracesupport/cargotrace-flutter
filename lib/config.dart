@@ -26,6 +26,15 @@ class Config {
   /// ios/Runner CFBundleIdentifier).
   static const iosBundleId = 'app.cargotrace.driver';
 
+  /// Android equivalents for an Android-app-restricted key: the applicationId
+  /// (sent as `X-Android-Package`) and the signing certificate's SHA-1 (sent as
+  /// `X-Android-Cert`). The SHA-1 differs between the debug keystore and the
+  /// release/upload keystore, so it's supplied per build:
+  ///   --dart-define=GOOGLE_ANDROID_CERT_SHA1=AB:CD:...  (colons optional)
+  static const androidPackage = 'app.cargotrace.driver';
+  static const androidCertSha1 = String.fromEnvironment(
+      'GOOGLE_ANDROID_CERT_SHA1', defaultValue: '');
+
   static const apiBaseUrl =
       String.fromEnvironment('API_BASE_URL', defaultValue: '');
 }

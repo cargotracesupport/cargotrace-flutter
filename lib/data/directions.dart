@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -43,28 +44,41 @@ class RouteResult {
 /// failure — no key, network error, blocked key, or empty result — so callers
 /// fall back to a straight line and stay in-app.
 ///
-/// The Maps key is restricted to the iOS app, so REST calls must present the
-/// bundle id via `X-Ios-Bundle-Identifier` to pass that restriction.
+/// The Maps key is application-restricted, so the REST call must identify the
+/// app: `X-Ios-Bundle-Identifier` on iOS, `X-Android-Package` +
+/// `X-Android-Cert` on Android.
 Future<RouteResult?> fetchDrivingRoute(LatLng origin, LatLng dest) async {
   if (!Config.mapsEnabled) return null;
   final uri =
       Uri.parse('https://routes.googleapis.com/directions/v2:computeRoutes');
+  // The Maps key is application-restricted, so the REST call must identify the
+  // app the same way the native SDK does: the iOS bundle id on iOS, or the
+  // Android package + signing-cert SHA-1 on Android.
+  final headers = <String, String>{
+    'Content-Type': 'application/json',
+    'X-Goog-Api-Key': Config.googleMapsKey,
+    'X-Goog-FieldMask': [
+      'routes.duration',
+      'routes.distanceMeters',
+      'routes.polyline.encodedPolyline',
+      'routes.legs.steps.navigationInstruction',
+      'routes.legs.steps.distanceMeters',
+      'routes.legs.steps.endLocation',
+    ].join(','),
+  };
+  if (Platform.isIOS) {
+    headers['X-Ios-Bundle-Identifier'] = Config.iosBundleId;
+  } else if (Platform.isAndroid) {
+    headers['X-Android-Package'] = Config.androidPackage;
+    if (Config.androidCertSha1.isNotEmpty) {
+      headers['X-Android-Cert'] =
+          Config.androidCertSha1.replaceAll(':', '').toUpperCase();
+    }
+  }
   try {
     final res = await http.post(
       uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': Config.googleMapsKey,
-        'X-Ios-Bundle-Identifier': Config.iosBundleId,
-        'X-Goog-FieldMask': [
-          'routes.duration',
-          'routes.distanceMeters',
-          'routes.polyline.encodedPolyline',
-          'routes.legs.steps.navigationInstruction',
-          'routes.legs.steps.distanceMeters',
-          'routes.legs.steps.endLocation',
-        ].join(','),
-      },
+      headers: headers,
       body: jsonEncode({
         'origin': {
           'location': {

@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Network: Supabase, Google Maps tiles, Routes API. The Flutter template
+         only grants INTERNET in the debug manifest, so release needs it here. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Live navigation, the 2 km action geofence, and position write-back. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="Goodswala"
         android:name="${applicationName}"
