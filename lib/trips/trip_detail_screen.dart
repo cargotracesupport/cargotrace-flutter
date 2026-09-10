@@ -41,7 +41,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     super.initState();
     _stream = supabase
         .from('deliveries')
-        .stream(primaryKey: ['id']).eq('id', widget.initial.id);
+        .stream(primaryKey: ['id'])
+        .eq('id', widget.initial.id);
     _initLocation();
   }
 
@@ -60,14 +61,15 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         if (mounted) setState(() => _locBlocked = true);
         return;
       }
-      _posSub = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          distanceFilter: 20,
-        ),
-      ).listen((p) {
-        if (mounted) setState(() => _me = LatLng(p.latitude, p.longitude));
-      });
+      _posSub =
+          Geolocator.getPositionStream(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.high,
+              distanceFilter: 20,
+            ),
+          ).listen((p) {
+            if (mounted) setState(() => _me = LatLng(p.latitude, p.longitude));
+          });
     } catch (_) {
       if (mounted) setState(() => _locBlocked = true);
     }
@@ -107,9 +109,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       'started_at': _now(),
     });
     if (ok && mounted) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => NavScreen(initial: trip)),
-      );
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => NavScreen(initial: trip)));
     }
   }
 
@@ -126,36 +128,25 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       _snack('No drop-off set for this delivery yet.');
       return;
     }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Mark as delivered?'),
-        content: const Text(
+    final confirmed = await showCtConfirm(
+      context,
+      icon: Icons.inventory_2_rounded,
+      title: 'Mark as delivered?',
+      message:
           'Confirm the goods have been handed over at the drop-off. '
           'This completes the trip.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Mark delivered'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Mark delivered',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     await _apply(trip.id, {'status': 'delivered', 'delivered_at': _now()});
   }
 
-  void _openNav(Delivery trip) => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => NavScreen(initial: trip)),
-      );
+  void _openNav(Delivery trip) => Navigator.of(
+    context,
+  ).push(MaterialPageRoute(builder: (_) => NavScreen(initial: trip)));
 
-  void _snack(String msg) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(msg)));
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +171,11 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           ),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(
-                CtSpace.md, CtSpace.sm, CtSpace.md, CtSpace.xl),
+              CtSpace.md,
+              CtSpace.sm,
+              CtSpace.md,
+              CtSpace.xl,
+            ),
             children: [
               _MapCard(trip: trip, onMapCreated: (m) => _map = m),
               const SizedBox(height: CtSpace.md),
@@ -289,7 +284,8 @@ class _MapCard extends StatelessWidget {
             position: LatLng(trip.originLat!, trip.originLng!),
             infoWindow: const InfoWindow(title: 'Pick up'),
             icon: BitmapDescriptor.defaultMarkerWithHue(
-                BitmapDescriptor.hueAzure),
+              BitmapDescriptor.hueAzure,
+            ),
           ),
         if (trip.hasDest)
           Marker(
@@ -297,7 +293,8 @@ class _MapCard extends StatelessWidget {
             position: LatLng(trip.destLat!, trip.destLng!),
             infoWindow: const InfoWindow(title: 'Drop off'),
             icon: BitmapDescriptor.defaultMarkerWithHue(
-                BitmapDescriptor.hueOrange),
+              BitmapDescriptor.hueOrange,
+            ),
           ),
         if (trip.hasPosition)
           Marker(
@@ -333,13 +330,15 @@ class _MapCard extends StatelessWidget {
               if (p.longitude < minLng) minLng = p.longitude;
               if (p.longitude > maxLng) maxLng = p.longitude;
             }
-            m.animateCamera(CameraUpdate.newLatLngBounds(
-              LatLngBounds(
-                southwest: LatLng(minLat, minLng),
-                northeast: LatLng(maxLat, maxLng),
+            m.animateCamera(
+              CameraUpdate.newLatLngBounds(
+                LatLngBounds(
+                  southwest: LatLng(minLat, minLng),
+                  northeast: LatLng(maxLat, maxLng),
+                ),
+                56,
               ),
-              56,
-            ));
+            );
           }
         },
         myLocationButtonEnabled: false,
@@ -410,11 +409,16 @@ class _ActionBar extends StatelessWidget {
     }
     if (me == null) return (ok: false, hint: 'Getting your location…');
     final d = Geolocator.distanceBetween(
-        me!.latitude, me!.longitude, lat!, lng!);
+      me!.latitude,
+      me!.longitude,
+      lat!,
+      lng!,
+    );
     if (d > kActionGeofenceMeters) {
       return (
         ok: false,
-        hint: "You're ${_dist(d)} from the $place — get within "
+        hint:
+            "You're ${_dist(d)} from the $place — get within "
             '${(kActionGeofenceMeters / 1000).toStringAsFixed(0)} km.',
       );
     }

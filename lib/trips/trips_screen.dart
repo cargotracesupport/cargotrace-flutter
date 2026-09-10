@@ -24,17 +24,30 @@ class TripsScreen extends StatefulWidget {
 }
 
 class _TripsScreenState extends State<TripsScreen> {
-  late final Stream<List<Map<String, dynamic>>> _stream;
+  late Stream<List<Map<String, dynamic>>> _stream;
 
   @override
   void initState() {
     super.initState();
-    final uid = supabase.auth.currentUser!.id;
-    _stream = supabase
+    _stream = _build();
+  }
+
+  Stream<List<Map<String, dynamic>>> _build() => supabase
+      .from('deliveries')
+      .stream(primaryKey: ['id'])
+      .eq('driver_id', supabase.auth.currentUser!.id)
+      .order('assigned_at');
+
+  /// Pull-to-refresh. The list is already realtime, so this is a reconnect:
+  /// one round-trip to prove the connection is alive (and to surface an error
+  /// if it isn't), then a fresh subscription.
+  Future<void> _refresh() async {
+    await supabase
         .from('deliveries')
-        .stream(primaryKey: ['id'])
-        .eq('driver_id', uid)
-        .order('assigned_at');
+        .select('id')
+        .eq('driver_id', supabase.auth.currentUser!.id)
+        .limit(1);
+    if (mounted) setState(() => _stream = _build());
   }
 
   /// Home is the driver's live work only: finished and cancelled trips drop
@@ -61,11 +74,15 @@ class _TripsScreenState extends State<TripsScreen> {
           stream: _stream,
           builder: (context, snap) {
             if (snap.hasError) {
-              return CtMessage(
-                icon: Icons.cloud_off_rounded,
-                title: 'Could not load your trips',
-                body: 'Check your connection. This screen retries on its own.',
-                tint: c.red,
+              return CtPullable(
+                onRefresh: _refresh,
+                child: CtMessage(
+                  icon: Icons.cloud_off_rounded,
+                  title: 'Could not load your trips',
+                  body:
+                      'Check your connection. This screen retries on its own.',
+                  tint: c.red,
+                ),
               );
             }
             if (!snap.hasData) {
@@ -78,24 +95,31 @@ class _TripsScreenState extends State<TripsScreen> {
             }
             final trips = _active(snap.data!);
             if (trips.isEmpty) {
-              return const CtMessage(
-                icon: Icons.local_shipping_outlined,
-                title: 'Nothing on the road',
-                body:
-                    'New assignments appear here right away. Completed '
-                    'deliveries live in the Deliveries tab.',
+              return CtPullable(
+                onRefresh: _refresh,
+                child: const CtMessage(
+                  icon: Icons.local_shipping_outlined,
+                  title: 'Nothing on the road',
+                  body:
+                      'New assignments appear here right away. Completed '
+                      'deliveries live in the Deliveries tab.',
+                ),
               );
             }
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(
-                CtSpace.md,
-                CtSpace.md,
-                CtSpace.md,
-                CtSpace.xl,
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(
+                  CtSpace.md,
+                  CtSpace.md,
+                  CtSpace.md,
+                  CtSpace.xl,
+                ),
+                itemCount: trips.length,
+                separatorBuilder: (_, __) => const SizedBox(height: CtSpace.md),
+                itemBuilder: (_, i) => _TripCard(trips[i]),
               ),
-              itemCount: trips.length,
-              separatorBuilder: (_, __) => const SizedBox(height: CtSpace.md),
-              itemBuilder: (_, i) => _TripCard(trips[i]),
             );
           },
         ),

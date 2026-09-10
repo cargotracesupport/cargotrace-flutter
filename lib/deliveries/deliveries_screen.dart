@@ -17,17 +17,28 @@ class DeliveriesScreen extends StatefulWidget {
 }
 
 class _DeliveriesScreenState extends State<DeliveriesScreen> {
-  late final Stream<List<Map<String, dynamic>>> _stream;
+  late Stream<List<Map<String, dynamic>>> _stream;
 
   @override
   void initState() {
     super.initState();
-    final uid = supabase.auth.currentUser!.id;
-    _stream = supabase
+    _stream = _build();
+  }
+
+  Stream<List<Map<String, dynamic>>> _build() => supabase
+      .from('deliveries')
+      .stream(primaryKey: ['id'])
+      .eq('driver_id', supabase.auth.currentUser!.id)
+      .order('assigned_at');
+
+  /// Pull-to-refresh: one round-trip to prove the connection, then resubscribe.
+  Future<void> _refresh() async {
+    await supabase
         .from('deliveries')
-        .stream(primaryKey: ['id'])
-        .eq('driver_id', uid)
-        .order('assigned_at');
+        .select('id')
+        .eq('driver_id', supabase.auth.currentUser!.id)
+        .limit(1);
+    if (mounted) setState(() => _stream = _build());
   }
 
   @override
@@ -46,19 +57,24 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
           stream: _stream,
           builder: (context, snap) {
             if (snap.hasError) {
-              return CtMessage(
-                icon: Icons.cloud_off_rounded,
-                title: 'Could not load deliveries',
-                body: 'Check your connection. This screen retries on its own.',
-                tint: c.red,
+              return CtPullable(
+                onRefresh: _refresh,
+                child: CtMessage(
+                  icon: Icons.cloud_off_rounded,
+                  title: 'Could not load deliveries',
+                  body:
+                      'Check your connection. This screen retries on its own.',
+                  tint: c.red,
+                ),
               );
             }
             if (!snap.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
             final all = snap.data!.map(Delivery.fromMap).toList();
-            final upcoming =
-                all.where((d) => !d.isDone && d.status != 'cancelled').toList();
+            final upcoming = all
+                .where((d) => !d.isDone && d.status != 'cancelled')
+                .toList();
             final past = all
                 .where((d) => d.isDone || d.status == 'cancelled')
                 .toList()
@@ -66,27 +82,38 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                 .toList();
 
             if (upcoming.isEmpty && past.isEmpty) {
-              return const CtMessage(
-                icon: Icons.inventory_2_outlined,
-                title: 'No deliveries yet',
-                body: 'Assignments from your dispatcher show up here.',
+              return CtPullable(
+                onRefresh: _refresh,
+                child: const CtMessage(
+                  icon: Icons.inventory_2_outlined,
+                  title: 'No deliveries yet',
+                  body: 'Assignments from your dispatcher show up here.',
+                ),
               );
             }
 
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(
-                  CtSpace.md, CtSpace.md, CtSpace.md, CtSpace.xl),
-              children: [
-                if (upcoming.isNotEmpty) ...[
-                  const _SectionLabel('UPCOMING'),
-                  ...upcoming.map((d) => _DeliveryRow(d)),
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(
+                  CtSpace.md,
+                  CtSpace.md,
+                  CtSpace.md,
+                  CtSpace.xl,
+                ),
+                children: [
+                  if (upcoming.isNotEmpty) ...[
+                    const _SectionLabel('UPCOMING'),
+                    ...upcoming.map((d) => _DeliveryRow(d)),
+                  ],
+                  if (past.isNotEmpty) ...[
+                    const SizedBox(height: CtSpace.md),
+                    const _SectionLabel('PAST'),
+                    ...past.map((d) => _DeliveryRow(d)),
+                  ],
                 ],
-                if (past.isNotEmpty) ...[
-                  const SizedBox(height: CtSpace.md),
-                  const _SectionLabel('PAST'),
-                  ...past.map((d) => _DeliveryRow(d)),
-                ],
-              ],
+              ),
             );
           },
         ),
@@ -130,8 +157,7 @@ class _DeliveryRow extends StatelessWidget {
         opacity: trip.isDone || trip.status == 'cancelled' ? 0.7 : 1,
         child: CtCard(
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-                builder: (_) => TripDetailScreen(initial: trip)),
+            MaterialPageRoute(builder: (_) => TripDetailScreen(initial: trip)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

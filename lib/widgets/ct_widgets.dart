@@ -220,6 +220,136 @@ class CtErrorBanner extends StatelessWidget {
   }
 }
 
+/// Wraps a non-scrolling state (empty, error) so it can still be pulled down
+/// to refresh — a bare Column gives RefreshIndicator no scrollable to listen to.
+class CtPullable extends StatelessWidget {
+  final Future<void> Function() onRefresh;
+  final Widget child;
+  const CtPullable({super.key, required this.onRefresh, required this.child});
+
+  @override
+  Widget build(BuildContext context) => RefreshIndicator(
+    onRefresh: onRefresh,
+    child: LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
+        ),
+      ),
+    ),
+  );
+}
+
+/// A modal confirmation sheet — the app's replacement for AlertDialog.
+///
+/// Slides up from the bottom, so it stays in the thumb's reach on a phone and
+/// carries the app's own surface, radii and buttons rather than the platform
+/// dialog's. Returns true only when the confirm action is chosen; dismissing by
+/// tapping outside or dragging down returns false.
+Future<bool> showCtConfirm(
+  BuildContext context, {
+  required String title,
+  required String message,
+  String confirmLabel = 'Confirm',
+  String cancelLabel = 'Cancel',
+  IconData icon = Icons.help_outline_rounded,
+  bool destructive = false,
+}) async {
+  final c = context.ct;
+  final result = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: const Color(0xFF0F1727).withValues(alpha: 0.45),
+    builder: (ctx) => Padding(
+      padding: EdgeInsets.only(
+        left: CtSpace.md,
+        right: CtSpace.md,
+        bottom: CtSpace.md + MediaQuery.of(ctx).padding.bottom,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(CtSpace.lg),
+        decoration: BoxDecoration(
+          color: c.s1,
+          borderRadius: BorderRadius.circular(CtRadius.xl),
+          border: Border.all(color: c.border),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F1E46).withValues(alpha: 0.20),
+              blurRadius: 34,
+              offset: const Offset(0, 14),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: c.border2,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: CtSpace.lg),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: (destructive ? c.red : c.primary).withValues(
+                  alpha: 0.12,
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 26,
+                color: destructive ? c.red : c.primary,
+              ),
+            ),
+            const SizedBox(height: CtSpace.md),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                color: c.text,
+              ),
+            ),
+            const SizedBox(height: CtSpace.sm),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: c.muted2, height: 1.45),
+            ),
+            const SizedBox(height: CtSpace.lg),
+            CtPrimaryButton(
+              label: confirmLabel,
+              onPressed: () => Navigator.pop(ctx, true),
+            ),
+            const SizedBox(height: CtSpace.sm),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              style: TextButton.styleFrom(
+                foregroundColor: c.muted2,
+                minimumSize: const Size(0, 48),
+              ),
+              child: Text(cancelLabel),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+  return result ?? false;
+}
+
 /// Card surface matching the web `.ct-card` (rounded-xl, hairline border,
 /// translucent surface, soft shadow).
 class CtCard extends StatelessWidget {
