@@ -15,55 +15,59 @@ class OnboardingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: CtHeroBackdrop(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(CtSpace.lg),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: _GlassPanel(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const CtWordmark(fontSize: 30),
-                        const SizedBox(height: CtSpace.md),
-                        const Text(
-                          'Every delivery, tracked door to door.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F1727),
-                            height: 1.3,
-                          ),
+        child: Stack(
+          children: [
+            // Wordmark floats in the middle of the artwork, not in the panel.
+            const Center(child: CtWordmark(fontSize: 40)),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(CtSpace.lg),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: _GlassPanel(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text(
+                              'Every delivery, tracked door to door.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0F1727),
+                                height: 1.3,
+                              ),
+                            ),
+                            const SizedBox(height: CtSpace.sm),
+                            const Text(
+                              'Pick up, navigate turn by turn, and confirm '
+                              'drop-off — your trips and their live status in one '
+                              'place.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                height: 1.45,
+                                color: Color(0xCC0F1727),
+                              ),
+                            ),
+                            const SizedBox(height: CtSpace.lg),
+                            CtPrimaryButton(
+                              label: 'Get started',
+                              icon: Icons.arrow_forward_rounded,
+                              onPressed: onGetStarted,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: CtSpace.sm),
-                        const Text(
-                          'Pick up, navigate turn by turn, and confirm '
-                          'drop-off — your trips and their live status in one '
-                          'place.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            height: 1.45,
-                            color: Color(0xCC0F1727),
-                          ),
-                        ),
-                        const SizedBox(height: CtSpace.lg),
-                        CtPrimaryButton(
-                          label: 'Get started',
-                          icon: Icons.arrow_forward_rounded,
-                          onPressed: onGetStarted,
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

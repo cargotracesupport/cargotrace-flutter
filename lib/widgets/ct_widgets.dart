@@ -127,7 +127,10 @@ class CtWordmark extends StatelessWidget {
       const TextSpan(
         children: [
           TextSpan(text: 'Goods'),
-          TextSpan(text: 'wala', style: TextStyle(color: Color(0xFF2563EB))),
+          TextSpan(
+            text: 'wala',
+            style: TextStyle(color: Color(0xFF2563EB)),
+          ),
         ],
       ),
       textAlign: TextAlign.center,
@@ -136,7 +139,13 @@ class CtWordmark extends StatelessWidget {
         fontWeight: FontWeight.w800,
         color: const Color(0xFF0F1727),
         letterSpacing: -0.6,
-        shadows: const [Shadow(color: Color(0xCCFFFFFF), blurRadius: 14)],
+        // Two-stop white halo: centred on the artwork the mark can sit over
+        // the sky, the white cab or the blue container, and a single soft
+        // shadow wasn't enough to hold the blue "wala" against the container.
+        shadows: const [
+          Shadow(color: Color(0xF2FFFFFF), blurRadius: 16),
+          Shadow(color: Color(0x80FFFFFF), blurRadius: 34),
+        ],
       ),
     );
   }
@@ -351,13 +360,13 @@ class CtStatusPill extends StatelessWidget {
   };
 
   Color _color(CtColors c) => switch (status) {
-        'awaiting_dropoff' => c.amber,
-        'assigned' => c.blue,
-        'en_route' => c.green,
-        'delivered' => c.green,
-        'cancelled' => c.red,
-        _ => c.muted2,
-      };
+    'awaiting_dropoff' => c.amber,
+    'assigned' => c.blue,
+    'en_route' => c.green,
+    'delivered' => c.green,
+    'cancelled' => c.red,
+    _ => c.muted2,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -464,13 +473,13 @@ class CtTripSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ct;
     Widget bar(double w, double h) => Container(
-          width: w,
-          height: h,
-          decoration: BoxDecoration(
-            color: c.s3,
-            borderRadius: BorderRadius.circular(6),
-          ),
-        );
+      width: w,
+      height: h,
+      decoration: BoxDecoration(
+        color: c.s3,
+        borderRadius: BorderRadius.circular(6),
+      ),
+    );
     return CtCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -61,6 +61,12 @@ class AuthGate extends StatelessWidget {
 /// The step is held in state rather than persisted, so a signed-out user sees
 /// onboarding again on the next launch. Persisting "already seen" would need a
 /// storage plugin.
+///
+/// Signing out always lands back on onboarding: while signed in [AuthGate]
+/// builds a [RoleGate] instead, so this widget's element is destroyed and a
+/// fresh state (with [_started] false) is created on the way back. Keep that
+/// type swap in place — routing both states through one shared widget would
+/// preserve [_started] and drop the user straight onto the sign-in form.
 class SignedOutFlow extends StatefulWidget {
   const SignedOutFlow({super.key});
 
