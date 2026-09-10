@@ -308,7 +308,9 @@ class CtPullable extends StatelessWidget {
     onRefresh: onRefresh,
     child: LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: ClampingScrollPhysics(),
+        ),
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
           child: child,

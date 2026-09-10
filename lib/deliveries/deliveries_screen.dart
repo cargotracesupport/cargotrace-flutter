@@ -95,7 +95,9 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
             return RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: ClampingScrollPhysics(),
+                ),
                 padding: const EdgeInsets.fromLTRB(
                   CtSpace.md,
                   CtSpace.md,

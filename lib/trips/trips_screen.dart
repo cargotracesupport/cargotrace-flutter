@@ -110,7 +110,9 @@ class _TripsScreenState extends State<TripsScreen> {
             return RefreshIndicator(
               onRefresh: _refresh,
               child: ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: ClampingScrollPhysics(),
+                ),
                 padding: const EdgeInsets.fromLTRB(
                   CtSpace.md,
                   CtSpace.md,

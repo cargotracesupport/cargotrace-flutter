@@ -23,6 +23,29 @@ Future<void> main() async {
   runApp(const CargoTraceDriverApp());
 }
 
+/// Scroll behaviour for the whole app: no rubber-band overscroll.
+///
+/// Flutter gives iOS BouncingScrollPhysics, so every scroll view wobbles — even
+/// pages whose content already fits, where there is nothing to scroll to. This
+/// clamps at the edges instead. Pull-to-refresh still works: RefreshIndicator
+/// listens for overscroll, which clamping physics still reports (it is what
+/// Android has always used).
+class CtScrollBehavior extends MaterialScrollBehavior {
+  const CtScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const ClampingScrollPhysics();
+
+  // No Android glow either — the app has its own refresh affordance.
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) => child;
+}
+
 class CargoTraceDriverApp extends StatelessWidget {
   const CargoTraceDriverApp({super.key});
 
@@ -35,6 +58,7 @@ class CargoTraceDriverApp extends StatelessWidget {
       builder: (context, mode, _) => MaterialApp(
         title: 'Goodswala',
         debugShowCheckedModeBanner: false,
+        scrollBehavior: const CtScrollBehavior(),
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
         themeMode: mode,
