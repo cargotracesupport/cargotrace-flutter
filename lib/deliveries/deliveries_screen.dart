@@ -104,40 +104,18 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                 ),
                 children: [
                   if (upcoming.isNotEmpty) ...[
-                    const _SectionLabel('UPCOMING'),
+                    const CtSectionLabel('UPCOMING'),
                     ...upcoming.map((d) => _DeliveryRow(d)),
                   ],
                   if (past.isNotEmpty) ...[
                     const SizedBox(height: CtSpace.md),
-                    const _SectionLabel('PAST'),
+                    const CtSectionLabel('PAST'),
                     ...past.map((d) => _DeliveryRow(d)),
                   ],
                 ],
               ),
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.ct;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: CtSpace.sm, left: 2),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.2,
-          color: c.muted,
         ),
       ),
     );
@@ -156,9 +134,9 @@ class _DeliveryRow extends StatelessWidget {
       child: Opacity(
         opacity: trip.isDone || trip.status == 'cancelled' ? 0.7 : 1,
         child: CtCard(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => TripDetailScreen(initial: trip)),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(CtPageRoute(builder: (_) => TripDetailScreen(initial: trip))),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -167,9 +145,8 @@ class _DeliveryRow extends StatelessWidget {
                   Expanded(
                     child: Text(
                       trip.reference ?? 'No reference',
-                      style: TextStyle(
+                      style: CtType.cardTitle.copyWith(
                         fontSize: 15,
-                        fontWeight: FontWeight.w800,
                         color: c.text,
                       ),
                       overflow: TextOverflow.ellipsis,

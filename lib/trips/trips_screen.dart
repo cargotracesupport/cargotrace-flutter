@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../data/db.dart';
 import '../data/delivery.dart';
@@ -136,9 +137,9 @@ class _TripCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ct;
     return CtCard(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => TripDetailScreen(initial: trip)),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(CtPageRoute(builder: (_) => TripDetailScreen(initial: trip))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -147,12 +148,7 @@ class _TripCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   trip.reference ?? 'No reference',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: c.text,
-                    letterSpacing: -0.2,
-                  ),
+                  style: CtType.cardTitle.copyWith(color: c.text),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -161,8 +157,12 @@ class _TripCard extends StatelessWidget {
             ],
           ),
           if (trip.goods != null) ...[
-            const SizedBox(height: CtSpace.xs),
-            Text(trip.goods!, style: TextStyle(color: c.muted2, fontSize: 13)),
+            const SizedBox(height: 2),
+            Text(
+              trip.goods!,
+              style: CtType.bodySm.copyWith(color: c.muted2),
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
           const SizedBox(height: CtSpace.md),
           _Leg(
@@ -178,8 +178,79 @@ class _TripCard extends StatelessWidget {
             label: 'Drop off',
             value: trip.destLabel,
           ),
+          const SizedBox(height: CtSpace.md),
+          _Progress(trip),
         ],
       ),
+    );
+  }
+}
+
+/// A three-step rail under each trip: assigned, picked up, delivered. Shows how
+/// far along the job is at a glance, with the straight-line distance between
+/// pickup and drop-off when both have coordinates.
+class _Progress extends StatelessWidget {
+  final Delivery trip;
+  const _Progress(this.trip);
+
+  String? get _distance {
+    if (!trip.hasOrigin || !trip.hasDest) return null;
+    final m = Geolocator.distanceBetween(
+      trip.originLat!,
+      trip.originLng!,
+      trip.destLat!,
+      trip.destLng!,
+    );
+    return m < 950 ? '${m.round()} m' : '${(m / 1000).toStringAsFixed(1)} km';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ct;
+    final started = trip.isEnRoute || trip.isPickedUp || trip.isDone;
+    final steps = [started, trip.isPickedUp, trip.isDone];
+    final dist = _distance;
+    return Row(
+      children: [
+        for (var i = 0; i < steps.length; i++) ...[
+          if (i > 0)
+            Expanded(
+              child: Container(
+                height: 2,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: steps[i] ? c.green : c.border2,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: steps[i] ? c.green : c.border2,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
+        const SizedBox(width: CtSpace.sm),
+        Text(
+          trip.isDone
+              ? 'Delivered'
+              : trip.isPickedUp
+              ? 'On board'
+              : started
+              ? 'Heading to pick-up'
+              : 'Not started',
+          style: CtType.label.copyWith(color: c.muted),
+        ),
+        if (dist != null) ...[
+          const SizedBox(width: CtSpace.sm),
+          Icon(Icons.straighten_rounded, size: 12, color: c.muted),
+          const SizedBox(width: 3),
+          Text(dist, style: CtType.label.copyWith(color: c.muted)),
+        ],
+      ],
     );
   }
 }

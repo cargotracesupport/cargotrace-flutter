@@ -79,10 +79,10 @@ class CtColors extends ThemeExtension<CtColors> {
 
   /// The brand blue→cyan gradient (--grad-primary).
   LinearGradient get gradPrimary => LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [primary, primary2],
-      );
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primary, primary2],
+  );
 
   @override
   CtColors copyWith() => this;
@@ -131,4 +131,80 @@ class CtSpace {
   static const md = 16.0;
   static const lg = 24.0;
   static const xl = 32.0;
+}
+
+/// Type scale. One place for size/weight/tracking so screens stop inventing
+/// their own, which is what makes an app look assembled rather than designed.
+class CtType {
+  static const display = TextStyle(
+    fontSize: 28,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -0.6,
+    height: 1.15,
+  );
+  static const title = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -0.3,
+    height: 1.2,
+  );
+  static const cardTitle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -0.2,
+    height: 1.25,
+  );
+  static const body = TextStyle(fontSize: 14, height: 1.45);
+  static const bodySm = TextStyle(fontSize: 13, height: 1.4);
+
+  /// Uppercase micro-label above a value or a section.
+  static const label = TextStyle(
+    fontSize: 10,
+    fontWeight: FontWeight.w800,
+    letterSpacing: 0.9,
+  );
+  static const mono = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.2,
+  );
+}
+
+/// Layered shadows. Two stops — a tight contact shadow plus a wide ambient one
+/// — read as real depth where a single blur reads as a grey smudge. Darker and
+/// deeper in dark mode, where a soft light shadow would be invisible.
+class CtShadow {
+  static List<BoxShadow> card(Brightness b) => b == Brightness.dark
+      ? const [
+          BoxShadow(
+            color: Color(0x66000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 28,
+            offset: Offset(0, 12),
+          ),
+        ]
+      : const [
+          BoxShadow(
+            color: Color(0x0F0F1E46),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Color(0x140F1E46),
+            blurRadius: 26,
+            offset: Offset(0, 12),
+          ),
+        ];
+
+  static List<BoxShadow> raised(Brightness b, Color tint) => [
+    BoxShadow(
+      color: tint.withValues(alpha: b == Brightness.dark ? 0.34 : 0.38),
+      blurRadius: 22,
+      offset: const Offset(0, 10),
+    ),
+  ];
 }

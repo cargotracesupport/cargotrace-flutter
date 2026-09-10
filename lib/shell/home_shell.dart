@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../data/vehicle.dart';
 import '../deliveries/deliveries_screen.dart';
 import '../profile/profile_screen.dart';
+import '../theme/tokens.dart';
 import '../trips/trips_screen.dart';
 
 /// The signed-in driver's home: three tabs behind a bottom navigation bar —
@@ -13,12 +15,7 @@ class HomeShell extends StatefulWidget {
   final String? phone;
   final Vehicle? vehicle;
 
-  const HomeShell({
-    super.key,
-    this.driverName,
-    this.phone,
-    this.vehicle,
-  });
+  const HomeShell({super.key, this.driverName, this.phone, this.vehicle});
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -41,26 +38,36 @@ class _HomeShellState extends State<HomeShell> {
 
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.local_shipping_outlined),
-            selectedIcon: Icon(Icons.local_shipping),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.inventory_2_outlined),
-            selectedIcon: Icon(Icons.inventory_2_rounded),
-            label: 'Deliveries',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
-          ),
-        ],
+      bottomNavigationBar: DecoratedBox(
+        // Hairline lifts the bar off the content instead of letting the two
+        // surfaces bleed together.
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: context.ct.border)),
+        ),
+        child: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: (i) {
+            if (i != _index) HapticFeedback.selectionClick();
+            setState(() => _index = i);
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.local_shipping_outlined),
+              selectedIcon: Icon(Icons.local_shipping),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.inventory_2_outlined),
+              selectedIcon: Icon(Icons.inventory_2_rounded),
+              label: 'Deliveries',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline_rounded),
+              selectedIcon: Icon(Icons.person_rounded),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
     );
   }

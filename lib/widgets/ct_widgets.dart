@@ -220,6 +220,82 @@ class CtErrorBanner extends StatelessWidget {
   }
 }
 
+/// Gives anything tappable the same feel: a small scale-down while held and a
+/// light haptic on release. Used by cards and buttons so touch response is
+/// uniform instead of each widget inventing its own.
+class CtPressable extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final double scale;
+  final BorderRadius? borderRadius;
+  const CtPressable({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.scale = 0.975,
+    this.borderRadius,
+  });
+
+  @override
+  State<CtPressable> createState() => _CtPressableState();
+}
+
+class _CtPressableState extends State<CtPressable> {
+  bool _down = false;
+
+  void _set(bool v) {
+    if (widget.onTap == null || _down == v) return;
+    setState(() => _down = v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _set(true),
+      onTapCancel: () => _set(false),
+      onTapUp: (_) => _set(false),
+      onTap: widget.onTap == null
+          ? null
+          : () {
+              HapticFeedback.lightImpact();
+              widget.onTap!();
+            },
+      child: AnimatedScale(
+        scale: _down ? widget.scale : 1,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// Page transition used for pushes inside the app: a short fade with a slight
+/// rise, rather than the platform's full-width slide. Calmer, and it keeps the
+/// gradient header from sliding across the screen on every tap.
+class CtPageRoute<T> extends PageRouteBuilder<T> {
+  CtPageRoute({required WidgetBuilder builder})
+    : super(
+        transitionDuration: const Duration(milliseconds: 260),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+        pageBuilder: (context, a, b) => builder(context),
+        transitionsBuilder: (context, a, b, child) {
+          final curved = CurvedAnimation(parent: a, curve: Curves.easeOutCubic);
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(
+              position: Tween(
+                begin: const Offset(0, 0.035),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      );
+}
+
 /// Wraps a non-scrolling state (empty, error) so it can still be pulled down
 /// to refresh — a bare Column gives RefreshIndicator no scrollable to listen to.
 class CtPullable extends StatelessWidget {
@@ -366,30 +442,31 @@ class CtCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.ct;
+    final brightness = Theme.of(context).brightness;
     final radius = BorderRadius.circular(CtRadius.xl);
-    return DecoratedBox(
+    final card = DecoratedBox(
       decoration: BoxDecoration(
-        color: c.s1,
+        // A hair of vertical gradient stops the surface reading as flat fill.
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: brightness == Brightness.dark
+              ? [c.s2, c.s1]
+              : [c.s1, c.s2.withValues(alpha: 0.55)],
+        ),
         borderRadius: radius,
         border: Border.all(color: c.border),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F1E46).withValues(alpha: 0.10),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        boxShadow: CtShadow.card(brightness),
       ),
       child: Material(
         color: Colors.transparent,
         borderRadius: radius,
         clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(padding: padding, child: child),
-        ),
+        child: Padding(padding: padding, child: child),
       ),
     );
+    if (onTap == null) return card;
+    return CtPressable(onTap: onTap, borderRadius: radius, child: card);
   }
 }
 
@@ -415,26 +492,27 @@ class CtPrimaryButton extends StatelessWidget {
     final radius = BorderRadius.circular(CtRadius.lg);
     return Opacity(
       opacity: enabled ? 1 : 0.55,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: c.gradPrimary,
-          borderRadius: radius,
-          boxShadow: enabled
-              ? [
-                  BoxShadow(
-                    color: c.primary.withValues(alpha: 0.42),
-                    blurRadius: 22,
-                    offset: const Offset(0, 10),
-                  ),
-                ]
-              : null,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: radius,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: enabled ? onPressed : null,
+      child: CtPressable(
+        scale: 0.985,
+        borderRadius: radius,
+        onTap: enabled
+            ? () {
+                HapticFeedback.mediumImpact();
+                onPressed!();
+              }
+            : null,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: c.gradPrimary,
+            borderRadius: radius,
+            boxShadow: enabled
+                ? CtShadow.raised(Theme.of(context).brightness, c.primary)
+                : null,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: radius,
+            clipBehavior: Clip.antiAlias,
             child: SizedBox(
               height: 52, // >= 48dp touch target
               child: Center(
@@ -505,8 +583,9 @@ class CtStatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: status == 'delivered' ? 0.20 : 0.12),
+        color: color.withValues(alpha: status == 'delivered' ? 0.18 : 0.11),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -596,18 +675,45 @@ class CtMessage extends StatelessWidget {
 
 /// Shimmerless skeleton row shown while the trips stream is still connecting —
 /// reserves the same height as a real card so nothing jumps when data lands.
-class CtTripSkeleton extends StatelessWidget {
+class CtTripSkeleton extends StatefulWidget {
   const CtTripSkeleton({super.key});
+
+  @override
+  State<CtTripSkeleton> createState() => _CtTripSkeletonState();
+}
+
+class _CtTripSkeletonState extends State<CtTripSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1250),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = context.ct;
-    Widget bar(double w, double h) => Container(
-      width: w,
-      height: h,
-      decoration: BoxDecoration(
-        color: c.s3,
-        borderRadius: BorderRadius.circular(6),
+    // A highlight sweeping across the placeholders reads as "loading"; a static
+    // grey block reads as broken content.
+    Widget bar(double w, double h) => AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) => Container(
+        width: w,
+        height: h,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          gradient: LinearGradient(
+            begin: Alignment(-1 - 2 * (1 - _c.value), 0),
+            end: Alignment(1 + 2 * _c.value, 0),
+            colors: [c.s3, c.s2, c.s3],
+            stops: const [0.35, 0.5, 0.65],
+          ),
+        ),
       ),
     );
     return CtCard(
@@ -628,4 +734,19 @@ class CtTripSkeleton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Uppercase micro-heading above a group of rows.
+class CtSectionLabel extends StatelessWidget {
+  final String text;
+  const CtSectionLabel(this.text, {super.key});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: CtSpace.sm, left: 2),
+    child: Text(
+      text,
+      style: CtType.label.copyWith(color: context.ct.muted, letterSpacing: 1.2),
+    ),
+  );
 }

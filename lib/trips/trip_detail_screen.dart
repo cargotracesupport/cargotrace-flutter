@@ -111,7 +111,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     if (ok && mounted) {
       Navigator.of(
         context,
-      ).push(MaterialPageRoute(builder: (_) => NavScreen(initial: trip)));
+      ).push(CtPageRoute(builder: (_) => NavScreen(initial: trip)));
     }
   }
 
@@ -143,7 +143,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   void _openNav(Delivery trip) => Navigator.of(
     context,
-  ).push(MaterialPageRoute(builder: (_) => NavScreen(initial: trip)));
+  ).push(CtPageRoute(builder: (_) => NavScreen(initial: trip)));
 
   void _snack(String msg) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
