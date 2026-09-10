@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../data/db.dart';
 import '../data/vehicle.dart';
-import '../shell/home_shell.dart';
+import '../vehicle/vehicle_gate.dart';
 import '../theme/tokens.dart';
 import '../widgets/ct_widgets.dart';
 
 /// After login, loads the user's role from `profiles` and routes:
-///  - driver        → the trips screen
-///  - admin / agent  → "use the web dashboard"
+///  - driver         → vehicle-number step, then the driver home
+///  - agent/customer → "not in the app yet" (their flows are still to come)
 ///
 /// Mirrors the website, which routes admin→/admin, agent→/agent,
 /// driver→/driver from the same login. Row-Level Security lets a user read
@@ -74,17 +74,20 @@ class _RoleGateState extends State<RoleGate> {
         }
         final role = snap.data?.role;
         if (role == 'driver') {
-          return HomeShell(
+          // Drivers confirm their vehicle number before reaching the app.
+          return VehicleGate(
             driverName: snap.data?.name,
             phone: snap.data?.phone,
-            vehicle: snap.data?.vehicle,
+            assigned: snap.data?.vehicle,
           );
         }
+        // The app is shared by agents, customers and drivers, but only the
+        // driver flow exists so far.
         return _Gate(
-          icon: Icons.desktop_windows_outlined,
-          title: 'This app is for drivers',
-          body: 'Your account is a ${role ?? 'staff'} account. '
-              'Managers and dispatchers use the CargoTrace web dashboard.',
+          icon: Icons.construction_rounded,
+          title: 'Not in the app yet',
+          body: 'Your account is a ${role ?? 'staff'} account. That part of '
+              'Goodswala is coming to the app — for now, use the web dashboard.',
         );
       },
     );

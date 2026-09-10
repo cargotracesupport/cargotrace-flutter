@@ -108,6 +108,39 @@ class CtDriverBadge extends StatelessWidget {
   }
 }
 
+/// Inline error placed directly under the fields it refers to. Icon + text so
+/// the failure is not signalled by colour alone.
+class CtErrorBanner extends StatelessWidget {
+  final String message;
+  const CtErrorBanner(this.message, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ct;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: c.red.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(CtRadius.lg),
+        border: Border.all(color: c.red.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, size: 18, color: c.red),
+          const SizedBox(width: CtSpace.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(color: c.red, fontSize: 13, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Card surface matching the web `.ct-card` (rounded-xl, hairline border,
 /// translucent surface, soft shadow).
 class CtCard extends StatelessWidget {
