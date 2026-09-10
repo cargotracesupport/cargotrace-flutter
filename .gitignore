@@ -46,3 +46,8 @@ app.*.map.json
 
 # Local secrets
 ios/Flutter/Secrets.xcconfig
+
+# Android upload keystore — never commit
+android/key.properties
+*.jks
+*.keystore
