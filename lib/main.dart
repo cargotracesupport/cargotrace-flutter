@@ -6,10 +6,13 @@ import 'auth/onboarding_screen.dart';
 import 'auth/role_gate.dart';
 import 'config.dart';
 import 'data/db.dart';
+import 'data/prefs.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Prefs.load();
+  ThemeController.init();
   await Supabase.initialize(
     url: Config.supabaseUrl,
     // This project uses the classic anon JWT (same key the website ships).
@@ -25,14 +28,18 @@ class CargoTraceDriverApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Goodswala',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      // Follow the phone's appearance, like the website follows the OS.
-      themeMode: ThemeMode.system,
-      home: const AuthGate(),
+    // Rebuilds the app when the driver picks a theme in Profile. The default
+    // is ThemeMode.system, so it follows the phone until they choose.
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController.mode,
+      builder: (context, mode, _) => MaterialApp(
+        title: 'Goodswala',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: mode,
+        home: const AuthGate(),
+      ),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/db.dart';
+import '../data/prefs.dart';
 import '../data/vehicle.dart';
 import '../shell/home_shell.dart';
 import '../theme/tokens.dart';
@@ -20,12 +21,7 @@ class VehicleGate extends StatefulWidget {
   /// The vehicle currently on the profile, if any (from RoleGate's embed).
   final Vehicle? assigned;
 
-  const VehicleGate({
-    super.key,
-    this.driverName,
-    this.phone,
-    this.assigned,
-  });
+  const VehicleGate({super.key, this.driverName, this.phone, this.assigned});
 
   @override
   State<VehicleGate> createState() => _VehicleGateState();
@@ -74,15 +70,17 @@ class _VehicleGateState extends State<VehicleGate> {
       }
       final assignedId = widget.assigned?.id;
       if (assignedId != null && assignedId != match.id) {
-        setState(
-            () => _error = "That vehicle isn't assigned to your account.");
+        setState(() => _error = "That vehicle isn't assigned to your account.");
         return;
       }
       if (assignedId == null) {
         await supabase
             .from('profiles')
-            .update({'vehicle_id': match.id}).eq('id', uid);
+            .update({'vehicle_id': match.id})
+            .eq('id', uid);
       }
+      // Remembered so the next launch skips straight to the app.
+      await Prefs.setConfirmedVehicleId(match.id);
       if (mounted) setState(() => _confirmed = match);
     } catch (_) {
       if (mounted) {
@@ -123,8 +121,11 @@ class _VehicleGateState extends State<VehicleGate> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(Icons.local_shipping_rounded,
-                        size: 40, color: c.primary),
+                    Icon(
+                      Icons.local_shipping_rounded,
+                      size: 40,
+                      color: c.primary,
+                    ),
                     const SizedBox(height: CtSpace.md),
                     Text(
                       'Enter your vehicle number',
@@ -153,8 +154,10 @@ class _VehicleGateState extends State<VehicleGate> {
                       decoration: const InputDecoration(
                         labelText: 'Vehicle number',
                         hintText: 'e.g. KA01AB1234',
-                        prefixIcon:
-                            Icon(Icons.local_shipping_outlined, size: 20),
+                        prefixIcon: Icon(
+                          Icons.local_shipping_outlined,
+                          size: 20,
+                        ),
                       ),
                     ),
                     if (_error != null) ...[

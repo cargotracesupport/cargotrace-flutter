@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../data/db.dart';
+import '../data/prefs.dart';
 import '../data/vehicle.dart';
+import '../shell/home_shell.dart';
 import '../vehicle/vehicle_gate.dart';
 import '../theme/tokens.dart';
 import '../widgets/ct_widgets.dart';
 
 /// After login, loads the user's role from `profiles` and routes:
-///  - driver         → vehicle-number step, then the driver home
+///  - driver         → the driver home, via the vehicle-number step the first
+///                     time and again whenever their vehicle changes
 ///  - agent/customer → "not in the app yet" (their flows are still to come)
 ///
 /// Mirrors the website, which routes admin→/admin, agent→/agent,
@@ -41,8 +44,10 @@ class _RoleGateState extends State<RoleGate> {
     Vehicle? vehicle;
     final vid = p['vehicle_id'] as String?;
     if (vid != null) {
-      final rows =
-          await supabase.from('vehicles').select('id, plate, name').eq('id', vid);
+      final rows = await supabase
+          .from('vehicles')
+          .select('id, plate, name')
+          .eq('id', vid);
       if (rows.isNotEmpty) vehicle = Vehicle.fromMap(rows.first);
     }
     return _Loaded(
@@ -74,11 +79,24 @@ class _RoleGateState extends State<RoleGate> {
         }
         final role = snap.data?.role;
         if (role == 'driver') {
-          // Drivers confirm their vehicle number before reaching the app.
+          final vehicle = snap.data?.vehicle;
+          // Drivers confirm their vehicle number once. The step is skipped
+          // while the vehicle they last confirmed is still the one on their
+          // profile; if a dispatcher reassigns them, the ids stop matching and
+          // they're asked to confirm the new vehicle.
+          final confirmed =
+              vehicle != null && Prefs.confirmedVehicleId == vehicle.id;
+          if (confirmed) {
+            return HomeShell(
+              driverName: snap.data?.name,
+              phone: snap.data?.phone,
+              vehicle: vehicle,
+            );
+          }
           return VehicleGate(
             driverName: snap.data?.name,
             phone: snap.data?.phone,
-            assigned: snap.data?.vehicle,
+            assigned: vehicle,
           );
         }
         // The app is shared by agents, customers and drivers, but only the
@@ -86,7 +104,8 @@ class _RoleGateState extends State<RoleGate> {
         return _Gate(
           icon: Icons.construction_rounded,
           title: 'Not in the app yet',
-          body: 'Your account is a ${role ?? 'staff'} account. That part of '
+          body:
+              'Your account is a ${role ?? 'staff'} account. That part of '
               'Goodswala is coming to the app — for now, use the web dashboard.',
         );
       },

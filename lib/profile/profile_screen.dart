@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/db.dart';
+import '../data/prefs.dart';
 import '../data/vehicle.dart';
 import '../theme/tokens.dart';
 import '../widgets/ct_widgets.dart';
@@ -12,12 +13,7 @@ class ProfileScreen extends StatelessWidget {
   final String? phone;
   final Vehicle? vehicle;
 
-  const ProfileScreen({
-    super.key,
-    this.driverName,
-    this.phone,
-    this.vehicle,
-  });
+  const ProfileScreen({super.key, this.driverName, this.phone, this.vehicle});
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +33,11 @@ class ProfileScreen extends StatelessWidget {
         top: false,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
-              CtSpace.md, CtSpace.md, CtSpace.md, CtSpace.xl),
+            CtSpace.md,
+            CtSpace.md,
+            CtSpace.md,
+            CtSpace.xl,
+          ),
           children: [
             // Identity header.
             Row(
@@ -75,7 +75,9 @@ class ProfileScreen extends StatelessWidget {
                       const SizedBox(height: 2),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: c.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(999),
@@ -141,6 +143,61 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: CtSpace.md),
+
+            // Appearance.
+            CtCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.brightness_6_outlined,
+                        size: 20,
+                        color: c.muted2,
+                      ),
+                      const SizedBox(width: CtSpace.md),
+                      Text(
+                        'APPEARANCE',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                          color: c.muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: CtSpace.sm),
+                  ValueListenableBuilder<ThemeMode>(
+                    valueListenable: ThemeController.mode,
+                    builder: (context, mode, _) => SegmentedButton<ThemeMode>(
+                      segments: const [
+                        ButtonSegment(
+                          value: ThemeMode.system,
+                          label: Text('System'),
+                          icon: Icon(Icons.phone_iphone_rounded, size: 16),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.light,
+                          label: Text('Light'),
+                          icon: Icon(Icons.light_mode_outlined, size: 16),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.dark,
+                          label: Text('Dark'),
+                          icon: Icon(Icons.dark_mode_outlined, size: 16),
+                        ),
+                      ],
+                      selected: {mode},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (s) => ThemeController.set(s.first),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: CtSpace.lg),
 
             CtPrimaryButton(
@@ -166,11 +223,7 @@ class _Line extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  const _Line({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  const _Line({required this.icon, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
