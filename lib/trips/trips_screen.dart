@@ -8,8 +8,11 @@ import '../widgets/ct_widgets.dart';
 
 /// Driver home — the live list of deliveries assigned to this driver.
 ///
+/// Only live work is listed — a trip leaves Home the moment it is delivered or
+/// cancelled, and the Deliveries tab keeps the full history.
+///
 /// Data comes straight from Supabase via a realtime `.stream()`: new
-/// assignments appear, cancellations disappear, and status changes update the
+/// assignments appear, finished ones disappear, and status changes update the
 /// pill, all without a manual refresh. Row-Level Security guarantees the query
 /// only ever returns THIS driver's deliveries.
 class TripsScreen extends StatefulWidget {
@@ -34,18 +37,12 @@ class _TripsScreenState extends State<TripsScreen> {
         .order('assigned_at');
   }
 
-  /// Active trips first, finished ones last; newest first within each group.
-  List<Delivery> _sorted(List<Map<String, dynamic>> rows) {
-    final trips = rows
-        .map(Delivery.fromMap)
-        .where((d) => d.status != 'cancelled')
-        .toList();
-    trips.sort((a, b) {
-      if (a.isDone != b.isDone) return a.isDone ? 1 : -1;
-      return 0;
-    });
-    return trips;
-  }
+  /// Home is the driver's live work only: finished and cancelled trips drop
+  /// off the list. The full history, completed included, is the Deliveries tab.
+  List<Delivery> _active(List<Map<String, dynamic>> rows) => rows
+      .map(Delivery.fromMap)
+      .where((d) => !d.isDone && d.status != 'cancelled')
+      .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -75,23 +72,27 @@ class _TripsScreenState extends State<TripsScreen> {
               return ListView.separated(
                 padding: const EdgeInsets.all(CtSpace.md),
                 itemCount: 3,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: CtSpace.md),
+                separatorBuilder: (_, __) => const SizedBox(height: CtSpace.md),
                 itemBuilder: (_, __) => const CtTripSkeleton(),
               );
             }
-            final trips = _sorted(snap.data!);
+            final trips = _active(snap.data!);
             if (trips.isEmpty) {
               return const CtMessage(
                 icon: Icons.local_shipping_outlined,
-                title: 'No trips yet',
-                body: 'When a dispatcher assigns you a delivery, '
-                    'it appears here right away.',
+                title: 'Nothing on the road',
+                body:
+                    'New assignments appear here right away. Completed '
+                    'deliveries live in the Deliveries tab.',
               );
             }
             return ListView.separated(
               padding: const EdgeInsets.fromLTRB(
-                  CtSpace.md, CtSpace.md, CtSpace.md, CtSpace.xl),
+                CtSpace.md,
+                CtSpace.md,
+                CtSpace.md,
+                CtSpace.xl,
+              ),
               itemCount: trips.length,
               separatorBuilder: (_, __) => const SizedBox(height: CtSpace.md),
               itemBuilder: (_, i) => _TripCard(trips[i]),
@@ -110,56 +111,50 @@ class _TripCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.ct;
-    return Opacity(
-      opacity: trip.isDone ? 0.62 : 1,
-      child: CtCard(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => TripDetailScreen(initial: trip)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    trip.reference ?? 'No reference',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: c.text,
-                      letterSpacing: -0.2,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+    return CtCard(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => TripDetailScreen(initial: trip)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  trip.reference ?? 'No reference',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: c.text,
+                    letterSpacing: -0.2,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: CtSpace.sm),
-                CtStatusPill(trip.status),
-              ],
-            ),
-            if (trip.goods != null) ...[
-              const SizedBox(height: CtSpace.xs),
-              Text(
-                trip.goods!,
-                style: TextStyle(color: c.muted2, fontSize: 13),
               ),
+              const SizedBox(width: CtSpace.sm),
+              CtStatusPill(trip.status),
             ],
-            const SizedBox(height: CtSpace.md),
-            _Leg(
-              color: c.primary,
-              filled: true,
-              label: 'Pick up',
-              value: trip.originLabel,
-            ),
-            _Connector(color: c.border2),
-            _Leg(
-              color: c.accent,
-              filled: false,
-              label: 'Drop off',
-              value: trip.destLabel,
-            ),
+          ),
+          if (trip.goods != null) ...[
+            const SizedBox(height: CtSpace.xs),
+            Text(trip.goods!, style: TextStyle(color: c.muted2, fontSize: 13)),
           ],
-        ),
+          const SizedBox(height: CtSpace.md),
+          _Leg(
+            color: c.primary,
+            filled: true,
+            label: 'Pick up',
+            value: trip.originLabel,
+          ),
+          _Connector(color: c.border2),
+          _Leg(
+            color: c.accent,
+            filled: false,
+            label: 'Drop off',
+            value: trip.destLabel,
+          ),
+        ],
       ),
     );
   }
