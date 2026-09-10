@@ -1,0 +1,78 @@
+<svg width="390" height="420" viewBox="0 0 390 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Road surface: fades in from the horizon so it works on light or dark. -->
+    <linearGradient id="road" x1="195" y1="150" x2="195" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#2563EB" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#2563EB" stop-opacity="0.16"/>
+    </linearGradient>
+    <linearGradient id="box" x1="120" y1="215" x2="270" y2="345" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="cab" x1="135" y1="292" x2="255" y2="372" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#0EA5C4"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="150" y1="302" x2="240" y2="340" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EAF4FF"/>
+      <stop offset="1" stop-color="#B9DCF7"/>
+    </linearGradient>
+    <!-- Haze at the horizon so the road doesn't end in a hard edge. -->
+    <radialGradient id="haze" cx="0" cy="0" r="1"
+      gradientTransform="translate(195 175) scale(150 70)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0696C7" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#0696C7" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1"
+      gradientTransform="translate(195 330) scale(170 120)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#2563EB" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <ellipse cx="195" cy="175" rx="150" ry="70" fill="url(#haze)"/>
+  <!-- Road running to a vanishing point, wide at the viewer. -->
+  <path d="M176 168 H214 L392 420 H-2 Z" fill="url(#road)"/>
+  <!-- Lane dashes, growing toward the viewer. -->
+  <g fill="#FFFFFF" opacity="0.55">
+    <path d="M193.4 186 h3.2 l0.5 11 h-4.2 z"/>
+    <path d="M192.4 214 h5.2 l0.8 16 h-6.8 z"/>
+    <path d="M190.8 254 h8.4 l1.3 23 h-11 z"/>
+    <path d="M188.4 310 h13.2 l2.2 33 h-17.6 z"/>
+    <path d="M184.6 386 h20.8 l3.4 34 h-27.6 z"/>
+  </g>
+
+  <ellipse cx="195" cy="330" rx="170" ry="120" fill="url(#glow)"/>
+
+  <!-- Container truck, front-on, coming at the viewer. -->
+  <g>
+    <ellipse cx="195" cy="392" rx="104" ry="14" fill="#0F1727" opacity="0.16"/>
+    <!-- container body seen behind the cab -->
+    <rect x="118" y="215" width="154" height="130" rx="9" fill="url(#box)"/>
+    <rect x="118" y="215" width="154" height="12" rx="6" fill="#FFFFFF" opacity="0.16"/>
+    <rect x="130" y="238" width="130" height="94" rx="5" fill="#FFFFFF" opacity="0.07"/>
+    <!-- cab -->
+    <rect x="132" y="292" width="126" height="84" rx="12" fill="url(#cab)"/>
+    <!-- windshield -->
+    <rect x="145" y="302" width="100" height="38" rx="7" fill="url(#glass)"/>
+    <rect x="193" y="302" width="4" height="38" fill="#FFFFFF" opacity="0.45"/>
+    <!-- mirrors -->
+    <rect x="120" y="304" width="12" height="20" rx="4" fill="#1E3A8A"/>
+    <rect x="258" y="304" width="12" height="20" rx="4" fill="#1E3A8A"/>
+    <!-- grille + headlights -->
+    <rect x="158" y="350" width="74" height="12" rx="4" fill="#0F1727" opacity="0.55"/>
+    <rect x="139" y="348" width="16" height="12" rx="5" fill="#FDE68A"/>
+    <rect x="235" y="348" width="16" height="12" rx="5" fill="#FDE68A"/>
+    <!-- headlight beams -->
+    <path d="M147 360 L118 420 H160 Z" fill="#FDE68A" opacity="0.18"/>
+    <path d="M243 360 L272 420 H230 Z" fill="#FDE68A" opacity="0.18"/>
+    <!-- bumper + wheels -->
+    <rect x="126" y="366" width="138" height="16" rx="6" fill="#1E3A8A"/>
+    <rect x="122" y="372" width="28" height="24" rx="7" fill="#0F1727"/>
+    <rect x="240" y="372" width="28" height="24" rx="7" fill="#0F1727"/>
+    <!-- roof marker lights -->
+    <rect x="170" y="209" width="10" height="6" rx="3" fill="#EA580C"/>
+    <rect x="210" y="209" width="10" height="6" rx="3" fill="#EA580C"/>
+  </g>
+</svg>
