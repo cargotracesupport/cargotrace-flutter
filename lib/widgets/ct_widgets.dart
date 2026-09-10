@@ -72,6 +72,76 @@ class CtHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
+/// The shared sign-in backdrop: the truck artwork behind a scrim in the page
+/// colour. Used by onboarding and the login screen so both look like one
+/// continuous scene.
+///
+/// The artwork is bright in light and dark themes, so anything drawn on top of
+/// it should use fixed ink colours rather than the theme's text colours.
+class CtHeroBackdrop extends StatelessWidget {
+  final Widget child;
+  const CtHeroBackdrop({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ct;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.asset(
+          'assets/illustrations/truck.png',
+          fit: BoxFit.cover,
+          alignment: Alignment.topCenter,
+          excludeFromSemantics: true,
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                c.bg.withValues(alpha: 0),
+                c.bg.withValues(alpha: 0),
+                c.bg.withValues(alpha: 0.45),
+                c.bg.withValues(alpha: 0.85),
+              ],
+              stops: const [0, 0.58, 0.86, 1],
+            ),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+}
+
+/// The Goodswala wordmark: "Goods" in dark ink, "wala" in brand blue, with a
+/// soft white glow so it reads over the sky, the road or the container.
+class CtWordmark extends StatelessWidget {
+  final double fontSize;
+  const CtWordmark({super.key, this.fontSize = 32});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      const TextSpan(
+        children: [
+          TextSpan(text: 'Goods'),
+          TextSpan(text: 'wala', style: TextStyle(color: Color(0xFF2563EB))),
+        ],
+      ),
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontSize: fontSize,
+        fontWeight: FontWeight.w800,
+        color: const Color(0xFF0F1727),
+        letterSpacing: -0.6,
+        shadows: const [Shadow(color: Color(0xCCFFFFFF), blurRadius: 14)],
+      ),
+    );
+  }
+}
+
 /// A small "DRIVER" pill for the gradient header — translucent white so it
 /// reads on the blue bar. Marks the signed-in role at a glance.
 class CtDriverBadge extends StatelessWidget {

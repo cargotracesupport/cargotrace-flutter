@@ -59,189 +59,150 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final c = context.ct;
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Hero backdrop: a container truck on the highway. Anchored to the
-          // top so the sky and truck stay visible above the sign-in card.
-          Image.asset(
-            'assets/illustrations/truck.png',
-            fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
-            excludeFromSemantics: true,
-          ),
-          // Scrim: clear over the artwork, solid page colour behind the form,
-          // so the card and wordmark read in both light and dark themes.
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  c.bg.withValues(alpha: 0),
-                  c.bg.withValues(alpha: 0),
-                  c.bg.withValues(alpha: 0.45),
-                  c.bg.withValues(alpha: 0.85),
-                ],
-                stops: const [0, 0.58, 0.86, 1],
+      body: CtHeroBackdrop(
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: CtSpace.lg,
+                vertical: CtSpace.lg,
               ),
-            ),
-          ),
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: CtSpace.lg,
-                  vertical: CtSpace.lg,
+              // A min height as tall as the viewport lets the Column bottom-
+              // align; without it the scroll view shrink-wraps and the card
+              // rides up to the top.
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - CtSpace.lg * 2,
                 ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Wordmark sits directly above the card. Fixed colours:
-                        // the backdrop is bright in light and dark themes, and
-                        // the text can land on the sky or the truck.
-                        const Text.rich(
-                          TextSpan(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CtWordmark(),
+                          const SizedBox(height: CtSpace.md),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              TextSpan(text: 'Goods'),
-                              TextSpan(
-                                text: 'wala',
-                                style: TextStyle(color: Color(0xFF2563EB)),
-                              ),
-                            ],
-                          ),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F1727),
-                            letterSpacing: -0.6,
-                            shadows: [
-                              Shadow(color: Color(0xCCFFFFFF), blurRadius: 14),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: CtSpace.md),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            CtCard(
-                              padding: const EdgeInsets.all(CtSpace.lg),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    'Sign in',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w700,
-                                      color: c.text,
-                                    ),
-                                  ),
-                                  const SizedBox(height: CtSpace.xs),
-                                  Text(
-                                    'Use your Goodswala account.',
-                                    style: TextStyle(color: c.muted2),
-                                  ),
-                                  const SizedBox(height: CtSpace.lg),
-                                  TextField(
-                                    controller: _email,
-                                    keyboardType: TextInputType.emailAddress,
-                                    textInputAction: TextInputAction.next,
-                                    autocorrect: false,
-                                    enableSuggestions: false,
-                                    autofillHints: const [
-                                      AutofillHints.username,
-                                    ],
-                                    enabled: !_busy,
-                                    onSubmitted: (_) =>
-                                        _passwordFocus.requestFocus(),
-                                    decoration: const InputDecoration(
-                                      labelText: 'Email',
-                                      prefixIcon: Icon(
-                                        Icons.mail_outline,
-                                        size: 20,
+                              CtCard(
+                                padding: const EdgeInsets.all(CtSpace.lg),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Text(
+                                      'Sign in',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                        color: c.text,
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(height: CtSpace.md),
-                                  TextField(
-                                    controller: _password,
-                                    focusNode: _passwordFocus,
-                                    obscureText: _obscure,
-                                    enabled: !_busy,
-                                    autofillHints: const [
-                                      AutofillHints.password,
-                                    ],
-                                    textInputAction: TextInputAction.done,
-                                    onSubmitted: (_) =>
-                                        _busy ? null : _signIn(),
-                                    decoration: InputDecoration(
-                                      labelText: 'Password',
-                                      prefixIcon: const Icon(
-                                        Icons.lock_outline,
-                                        size: 20,
-                                      ),
-                                      suffixIcon: IconButton(
-                                        // 48dp tap target for the reveal toggle.
-                                        onPressed: () => setState(
-                                          () => _obscure = !_obscure,
-                                        ),
-                                        icon: Icon(
-                                          _obscure
-                                              ? Icons.visibility_outlined
-                                              : Icons.visibility_off_outlined,
+                                    const SizedBox(height: CtSpace.xs),
+                                    Text(
+                                      'Use your Goodswala account.',
+                                      style: TextStyle(color: c.muted2),
+                                    ),
+                                    const SizedBox(height: CtSpace.lg),
+                                    TextField(
+                                      controller: _email,
+                                      keyboardType: TextInputType.emailAddress,
+                                      textInputAction: TextInputAction.next,
+                                      autocorrect: false,
+                                      enableSuggestions: false,
+                                      autofillHints: const [
+                                        AutofillHints.username,
+                                      ],
+                                      enabled: !_busy,
+                                      onSubmitted: (_) =>
+                                          _passwordFocus.requestFocus(),
+                                      decoration: const InputDecoration(
+                                        labelText: 'Email',
+                                        prefixIcon: Icon(
+                                          Icons.mail_outline,
                                           size: 20,
                                         ),
-                                        tooltip: _obscure
-                                            ? 'Show password'
-                                            : 'Hide password',
                                       ),
                                     ),
-                                  ),
-                                  if (_error != null) ...[
                                     const SizedBox(height: CtSpace.md),
-                                    CtErrorBanner(_error!),
+                                    TextField(
+                                      controller: _password,
+                                      focusNode: _passwordFocus,
+                                      obscureText: _obscure,
+                                      enabled: !_busy,
+                                      autofillHints: const [
+                                        AutofillHints.password,
+                                      ],
+                                      textInputAction: TextInputAction.done,
+                                      onSubmitted: (_) =>
+                                          _busy ? null : _signIn(),
+                                      decoration: InputDecoration(
+                                        labelText: 'Password',
+                                        prefixIcon: const Icon(
+                                          Icons.lock_outline,
+                                          size: 20,
+                                        ),
+                                        suffixIcon: IconButton(
+                                          // 48dp tap target for the reveal toggle.
+                                          onPressed: () => setState(
+                                            () => _obscure = !_obscure,
+                                          ),
+                                          icon: Icon(
+                                            _obscure
+                                                ? Icons.visibility_outlined
+                                                : Icons.visibility_off_outlined,
+                                            size: 20,
+                                          ),
+                                          tooltip: _obscure
+                                              ? 'Show password'
+                                              : 'Hide password',
+                                        ),
+                                      ),
+                                    ),
+                                    if (_error != null) ...[
+                                      const SizedBox(height: CtSpace.md),
+                                      CtErrorBanner(_error!),
+                                    ],
+                                    const SizedBox(height: CtSpace.lg),
+                                    CtPrimaryButton(
+                                      label: 'Sign in',
+                                      loading: _busy,
+                                      onPressed: _signIn,
+                                    ),
                                   ],
-                                  const SizedBox(height: CtSpace.lg),
-                                  CtPrimaryButton(
-                                    label: 'Sign in',
-                                    loading: _busy,
-                                    onPressed: _signIn,
-                                  ),
-                                ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: CtSpace.md),
-                            const Text(
-                              'Accounts are created by your administrator.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                // Same treatment as the wordmark: this can land
-                                // on the sky, the road or the container.
-                                color: Color(0xCC0F1727),
-                                fontSize: 12,
-                                shadows: [
-                                  Shadow(
-                                    color: Color(0xCCFFFFFF),
-                                    blurRadius: 10,
-                                  ),
-                                ],
+                              const SizedBox(height: CtSpace.md),
+                              const Text(
+                                'Accounts are created by your administrator.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  // Same treatment as the wordmark: this can land
+                                  // on the sky, the road or the container.
+                                  color: Color(0xCC0F1727),
+                                  fontSize: 12,
+                                  shadows: [
+                                    Shadow(
+                                      color: Color(0xCCFFFFFF),
+                                      blurRadius: 10,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
